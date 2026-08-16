@@ -3,8 +3,8 @@
 /android/
 
 # Dev-only test harness (symlinked in by scripts/link-dev.sh) and its generated
-# reports — never ship to students. If a template ever vendors a REAL addon,
-# narrow the /addons line to /addons/gdUnit4 at that point.
+# reports — never ship to students. The Ink runtime under /addons/inkgd is a
+# real shipped dependency; only the linked GdUnit4 test addon stays private.
 /test
-/addons
+/addons/gdUnit4
 /reports/
