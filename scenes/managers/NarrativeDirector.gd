@@ -24,6 +24,10 @@ signal story_ended
 ## Something went wrong. The message is the same one printed in Output.
 signal narrative_failed(message: String)
 
+# Every live director joins this group; the deferred runtime cleanup checks
+# it so it never removes a runtime another director has since adopted.
+const DIRECTORS_GROUP := "narrative_directors"
+
 var has_failed := false
 var last_error := ""
 
@@ -37,6 +41,7 @@ var _presentation_started := false
 var _start_requested := false
 
 func _ready() -> void:
+	add_to_group(DIRECTORS_GROUP)
 	# The Ink runtime must live as a child of the tree root, and the root is
 	# still busy assembling the scene during _ready(). One deferred step later
 	# it is free again, so the real setup happens in _boot().
@@ -50,10 +55,16 @@ func _exit_tree() -> void:
 		# deferred call still fires mid-shutdown, so it re-checks that the
 		# root and runtime are actually still there before touching them.
 		var cleanup := func() -> void:
-			var loop: MainLoop = Engine.get_main_loop()
-			if loop is SceneTree and is_instance_valid(loop.root) \
-					and loop.root.get_node_or_null("__InkRuntime") != null:
-				InkRuntimeManager.deinit(loop.root)
+			var tree := Engine.get_main_loop() as SceneTree
+			if tree == null or not is_instance_valid(tree.root):
+				return
+			if tree.root.get_node_or_null("__InkRuntime") == null:
+				return
+			# A director that booted while this cleanup sat in the queue has
+			# adopted the runtime — removing it would strand them mid-story.
+			if not tree.get_nodes_in_group(DIRECTORS_GROUP).is_empty():
+				return
+			InkRuntimeManager.deinit(tree.root)
 		cleanup.call_deferred()
 		_runtime = null
 

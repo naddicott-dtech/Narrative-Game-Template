@@ -77,7 +77,8 @@ short, specific answers.
   or `One Beat At A Time`.
 - **Auto-play reading speed:** select `NarrativePanel` → Inspector →
   Auto Play → **Auto Play Seconds Per Character** (higher = slower) and
-  **Auto Play Min Seconds** (shortest time any line stays up).
+  **Auto Play Min Seconds** (the shortest *automatic* wait — a manual click
+  can still advance sooner).
 - **Start with auto-play already on:** select `AutoPlayToggle` → Inspector →
   Button Pressed → **On**.
 - **Rename or restyle the Auto switch:** select `AutoPlayToggle` — its Text
