@@ -33,9 +33,18 @@ short, specific answers.
   `start_story()`, `continue_story()`, `choose(index)`.
 - **NarrativePanel** (node: `Main/UI/NarrativePanel`, script
   `scenes/ui/NarrativeUI.gd`) shows the text and choices. Click anywhere (or
-  press Space/Enter) to advance. It has five Inspector references that must
+  press Space/Enter) to advance. It has six Inspector references that must
   all be assigned: Director, Story Text, Story Scroll, Choices Container,
-  Choice Button Scene.
+  Choice Button Scene, Auto Play Toggle.
+- The panel's Inspector also has **Presentation Mode**: `Build Down` (lines
+  pile up and the page scrolls) or `One Beat At A Time` (the screen clears
+  and shows only the newest line).
+- **Auto-play:** the "Auto" switch (node `AutoPlayToggle`, top right) makes
+  the story advance itself. Each line stays up for
+  `max(Auto Play Min Seconds, line length × Auto Play Seconds Per Character)`
+  — then it advances. Auto-play always waits at choices, endings, and errors;
+  a manual click during auto-play advances at once and gives the next line
+  its full reading time.
 - **ChoiceButton** (`scenes/ui/ChoiceButton.tscn` + `.gd`) is duplicated once
   per choice at runtime. Restyle this one scene to restyle every choice.
 
@@ -63,6 +72,16 @@ short, specific answers.
   updates at once.
 - **Roomier choice area:** select `ChoicesScroll` → drag its top edge, or
   adjust its anchors/offsets in the Inspector.
+- **Screen clears between lines (or stops clearing):** select
+  `NarrativePanel` → Inspector → **Presentation Mode** → pick `Build Down`
+  or `One Beat At A Time`.
+- **Auto-play reading speed:** select `NarrativePanel` → Inspector →
+  Auto Play → **Auto Play Seconds Per Character** (higher = slower) and
+  **Auto Play Min Seconds** (shortest time any line stays up).
+- **Start with auto-play already on:** select `AutoPlayToggle` → Inspector →
+  Button Pressed → **On**.
+- **Rename or restyle the Auto switch:** select `AutoPlayToggle` — its Text
+  property and Theme Overrides are ordinary Button settings.
 - **Change the advance key (code tweak):** in `scenes/ui/NarrativeUI.gd`,
   `_unhandled_input` checks Godot's built-in `ui_accept` action (Space/Enter).
   Example — advance on any key press instead:
