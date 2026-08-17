@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://bjygvkrqu60at"]
+
+[ext_resource type="Script" path="res://scenes/ui/ChoiceButton.gd" id="1_a0hy1"]
+
+[node name="ChoiceButton" type="Button"]
+autowrap_mode = 2
+script = ExtResource("1_a0hy1")
