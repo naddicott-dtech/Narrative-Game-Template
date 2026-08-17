@@ -20,6 +20,10 @@ extends Control
 ## The ChoiceButton.tscn scene, duplicated once per choice.
 @export var choice_button_scene: PackedScene
 
+# False until every Inspector reference checks out; input stays dead before
+# that, so a half-wired panel can never silently eat story beats.
+var _setup_ok := false
+
 func _ready() -> void:
 	var missing := _missing_references()
 	if not missing.is_empty():
@@ -30,6 +34,14 @@ func _ready() -> void:
 		)
 		return
 
+	if not _choice_scene_is_usable():
+		push_error(
+			"[Narrative] Choice Button Scene must be ChoiceButton.tscn — a Button "
+			+ "with ChoiceButton.gd attached. Fix it on NarrativePanel in the Inspector."
+		)
+		return
+
+	_setup_ok = true
 	director.story_started.connect(_on_story_started)
 	director.beat_ready.connect(_on_beat_ready)
 	director.choices_ready.connect(_on_choices_ready)
@@ -57,7 +69,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_advance()
 
 func _advance() -> void:
-	if director != null:
+	if _setup_ok:
 		director.continue_story()
 
 func _on_story_started() -> void:
@@ -93,8 +105,24 @@ func _on_narrative_failed(message: String) -> void:
 	_scroll_to_bottom()
 
 func _clear_choices() -> void:
+	# Take each button out of the container right away — if the story jumps
+	# straight into another choice point, old and new buttons must never
+	# share the container, even for one frame.
 	for child in choices_container.get_children():
+		choices_container.remove_child(child)
 		child.queue_free()
+
+# Instantiates the assigned scene once to prove it behaves like a
+# ChoiceButton before the story starts, so a wrong assignment fails with one
+# clear message instead of a mid-story script error.
+func _choice_scene_is_usable() -> bool:
+	var probe := choice_button_scene.instantiate()
+	if probe == null:
+		return false
+	var usable: bool = probe is Button \
+		and probe.has_method("setup") and probe.has_signal("chosen")
+	probe.free()
+	return usable
 
 func _scroll_to_bottom() -> void:
 	# Wait one frame so the new text has been laid out, then jump down.

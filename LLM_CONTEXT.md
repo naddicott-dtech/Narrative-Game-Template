@@ -69,9 +69,11 @@ short, specific answers.
 
   ```gdscript
   func _unhandled_input(event: InputEvent) -> void:
-      if event is InputEventKey and event.pressed:
+      if event is InputEventKey and event.pressed and not event.echo:
           _advance()
   ```
+
+  (`not event.echo` stops a held-down key from racing through the story.)
 
 ## Story authoring reminders (Inky side)
 
