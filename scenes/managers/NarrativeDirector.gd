@@ -44,7 +44,17 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	if _created_runtime and _runtime != null:
-		InkRuntimeManager.deinit(get_tree().root)
+		# Deferred: at this moment the root may be busy tearing the scene down
+		# (game quit), and removing the runtime synchronously would print an
+		# engine error. One step later the root is free again. At quit the
+		# deferred call still fires mid-shutdown, so it re-checks that the
+		# root and runtime are actually still there before touching them.
+		var cleanup := func() -> void:
+			var loop: MainLoop = Engine.get_main_loop()
+			if loop is SceneTree and is_instance_valid(loop.root) \
+					and loop.root.get_node_or_null("__InkRuntime") != null:
+				InkRuntimeManager.deinit(loop.root)
+		cleanup.call_deferred()
 		_runtime = null
 
 func _boot() -> void:
