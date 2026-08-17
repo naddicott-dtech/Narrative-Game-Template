@@ -3,11 +3,19 @@
 # The visible half of the story player, attached to the NarrativePanel node.
 # It shows each story beat in the text area, builds one button per choice,
 # and turns the player's clicks (or Space/Enter) into "next line, please".
+# The Auto switch (top right) lets the story read itself: each line stays up
+# long enough to read, then advances — and always waits at choices.
 #
-# All five references below must be assigned in the Inspector. If one is
+# All six references below must be assigned in the Inspector. If one is
 # missing, the panel reports a single clear [Narrative] error and refuses to
 # start, instead of crashing somewhere confusing later.
 extends Control
+
+## The two ways story text can be shown. Pick one in the Inspector.
+enum PresentationMode {
+	BUILD_DOWN,         ## every line stays; new lines build down the page
+	ONE_BEAT_AT_A_TIME, ## the screen clears and shows only the newest line
+}
 
 ## The NarrativeDirector node that runs the story.
 @export var director: NarrativeDirector
@@ -19,10 +27,28 @@ extends Control
 @export var choices_container: VBoxContainer
 ## The ChoiceButton.tscn scene, duplicated once per choice.
 @export var choice_button_scene: PackedScene
+## How story text is presented (see PresentationMode above).
+@export var presentation_mode: PresentationMode = PresentationMode.BUILD_DOWN
+
+@export_group("Auto Play")
+## The on-screen "Auto" switch (top right) that lets the story read itself.
+@export var auto_play_toggle: CheckButton
+## Auto-play never flips to the next line faster than this many seconds.
+@export_range(0.1, 30.0, 0.1, "or_greater") var auto_play_min_seconds := 1.5
+## Extra reading time per letter, so longer lines stay up longer.
+@export_range(0.0, 1.0, 0.01, "or_greater") var auto_play_seconds_per_character := 0.05
 
 # False until every Inspector reference checks out; input stays dead before
 # that, so a half-wired panel can never silently eat story beats.
 var _setup_ok := false
+
+# The auto-play clock, created in code. One-shot: each beat winds it up once.
+var _auto_timer: Timer = null
+# How long the currently shown beat should stay up in auto-play.
+var _auto_delay := 0.0
+# True only while a beat is up and the story is advanceable — false at
+# choices, endings, and failures, so flipping the toggle there arms nothing.
+var _auto_advance_ok := false
 
 func _ready() -> void:
 	var missing := _missing_references()
@@ -42,6 +68,12 @@ func _ready() -> void:
 		return
 
 	_setup_ok = true
+	_auto_timer = Timer.new()
+	_auto_timer.one_shot = true
+	_auto_timer.timeout.connect(_advance)
+	add_child(_auto_timer)
+	auto_play_toggle.toggled.connect(_on_auto_play_toggled)
+
 	director.story_started.connect(_on_story_started)
 	director.beat_ready.connect(_on_beat_ready)
 	director.choices_ready.connect(_on_choices_ready)
@@ -73,14 +105,30 @@ func _advance() -> void:
 		director.continue_story()
 
 func _on_story_started() -> void:
+	# A fresh story must not inherit the previous story's ticking clock.
+	_pause_auto_play()
 	story_text.text = ""
 	_clear_choices()
 
 func _on_beat_ready(text: String, _tags: Array) -> void:
-	story_text.text += text
-	_scroll_to_bottom()
+	match presentation_mode:
+		PresentationMode.BUILD_DOWN:
+			story_text.text += text
+			_scroll_to_bottom()
+		PresentationMode.ONE_BEAT_AT_A_TIME:
+			story_text.text = text
+			story_scroll.scroll_vertical = 0
+
+	# Each beat rewinds the auto-play clock to its own reading time — a manual
+	# advance therefore also gives the next beat its full time up.
+	_auto_delay = _auto_play_delay_for(text)
+	_auto_advance_ok = true
+	if auto_play_toggle.button_pressed:
+		_auto_timer.stop()
+		_auto_timer.start(_auto_delay)
 
 func _on_choices_ready(choice_texts: Array) -> void:
+	_pause_auto_play()
 	for index in choice_texts.size():
 		var button: Button = choice_button_scene.instantiate()
 		button.setup(choice_texts[index], index)
@@ -93,16 +141,36 @@ func _on_choice_chosen(choice_index: int) -> void:
 
 func _on_story_ended() -> void:
 	# The story's own final line is the ending; nothing extra to show.
-	pass
+	_pause_auto_play()
 
 func _on_narrative_failed(message: String) -> void:
 	# Keep the last good text visible and add the error beneath it, so the
 	# problem is on screen even when nobody is watching the Output panel.
+	_pause_auto_play()
 	_clear_choices()
 	if story_text.text != "" and not story_text.text.ends_with("\n"):
 		story_text.text += "\n"
 	story_text.text += message + "\n"
 	_scroll_to_bottom()
+
+# The player flipped the Auto switch. On: time the beat that is up right now.
+# Off: stop the clock (the story simply waits for clicks again).
+func _on_auto_play_toggled(auto_on: bool) -> void:
+	_auto_timer.stop()
+	if auto_on and _auto_advance_ok:
+		_auto_timer.start(_auto_delay)
+
+# Auto-play may not run right now: a choice, an ending, or a failure is on
+# screen. The toggle can stay on — new beats rewind the clock when they flow.
+func _pause_auto_play() -> void:
+	_auto_advance_ok = false
+	if _auto_timer != null:
+		_auto_timer.stop()
+
+# Reading time for one beat: a floor so short lines don't flash past, plus
+# time that grows with the length of the line.
+func _auto_play_delay_for(text: String) -> float:
+	return maxf(auto_play_min_seconds, text.length() * auto_play_seconds_per_character)
 
 func _clear_choices() -> void:
 	# Take each button out of the container right away — if the story jumps
@@ -141,4 +209,6 @@ func _missing_references() -> Array:
 		missing.append("Choices Container")
 	if choice_button_scene == null:
 		missing.append("Choice Button Scene")
+	if auto_play_toggle == null:
+		missing.append("Auto Play Toggle")
 	return missing
