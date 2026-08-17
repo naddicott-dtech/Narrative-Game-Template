@@ -4,8 +4,8 @@
 [ext_resource type="Script" uid="uid://cqwlteyggf7h0" path="res://scenes/Main.gd" id="1_vcsgt"]
 [ext_resource type="PackedScene" uid="uid://bta1s1d428yeq" path="res://scenes/ui/HUD.tscn" id="2_0bbpv"]
 [ext_resource type="PackedScene" uid="uid://dfg7sg4fy4xy" path="res://scenes/levels/Level1.tscn" id="2_rarhs"]
-[ext_resource type="Script" path="res://scenes/managers/NarrativeDirector.gd" id="3_vcsgt"]
-[ext_resource type="Script" path="res://scenes/ui/NarrativeUI.gd" id="6_c01mt"]
+[ext_resource type="Script" uid="uid://dc6bcnu6gnbqb" path="res://scenes/managers/NarrativeDirector.gd" id="3_vcsgt"]
+[ext_resource type="Script" uid="uid://bv0rwm6cmxmvt" path="res://scenes/ui/NarrativeUI.gd" id="6_c01mt"]
 [ext_resource type="PackedScene" uid="uid://bjygvkrqu60at" path="res://scenes/ui/ChoiceButton.tscn" id="7_nxtc6"]
 
 [node name="Main" type="Node"]
