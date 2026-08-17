@@ -33,6 +33,8 @@ var _runtime: Node = null
 var _created_runtime := false
 var _story_over := false
 var _at_choices := false
+var _presentation_started := false
+var _start_requested := false
 
 func _ready() -> void:
 	# The Ink runtime must live as a child of the tree root, and the root is
@@ -63,6 +65,14 @@ func _boot() -> void:
 
 	load_story(story_file)
 
+	# Anyone who asked to start before we finished loading gets their start
+	# now. This keeps the scene working no matter which node _ready() ran
+	# first.
+	var wants_start := _start_requested
+	_start_requested = false
+	if wants_start and not has_failed and _story != null:
+		start_story()
+
 # Loads (or reloads) a compiled story. A successful load forgets any earlier
 # failure or ending, so the director is ready to start again.
 func load_story(json_path: String) -> bool:
@@ -70,13 +80,22 @@ func load_story(json_path: String) -> bool:
 	last_error = ""
 	_story_over = false
 	_at_choices = false
+	_presentation_started = false
 
 	_story = _loader.load_from_path(json_path, _runtime)
 	return _story != null
 
 func start_story() -> void:
-	if has_failed or _story == null:
+	if has_failed:
 		return
+	if _story == null:
+		# Not loaded yet (the deferred boot hasn't run). Remember the
+		# request; _boot() honors it as soon as loading succeeds.
+		_start_requested = true
+		return
+	if _presentation_started:
+		return
+	_presentation_started = true
 	story_started.emit()
 	continue_story()
 

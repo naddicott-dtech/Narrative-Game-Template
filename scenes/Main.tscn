@@ -76,6 +76,7 @@ fit_content = true
 [node name="ChoicesScroll" type="ScrollContainer" parent="UI/NarrativePanel/Rows"]
 custom_minimum_size = Vector2(0, 160)
 layout_mode = 2
+horizontal_scroll_mode = 0
 
 [node name="ChoicesContainer" type="VBoxContainer" parent="UI/NarrativePanel/Rows/ChoicesScroll"]
 layout_mode = 2
