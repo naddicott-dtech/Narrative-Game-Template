@@ -118,6 +118,9 @@ blocked by browsers). It needs a web server: an upload site works, or locally
 run `python3 -m http.server 8000` in a terminal inside `export/web/` and open
 `http://localhost:8000`.
 
+Browsers also pause a game whose tab is in the background — auto-play seems
+to stop, then resumes when the player returns to the tab. Normal, not a bug.
+
 | Works in the editor, broken in the browser | Likely fix |
 |---|---|
 | Red `Cannot open Ink JSON` only in the browser | Add `*.json` to the export filter above, re-export. |
