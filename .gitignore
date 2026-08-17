@@ -2,6 +2,9 @@
 .godot/
 /android/
 
+# Local HTML5 exports (Project -> Export... -> Web) — builds never belong in git
+/export/
+
 # Dev-only test harness (symlinked in by scripts/link-dev.sh) and its generated
 # reports — never ship to students. The Ink runtime under /addons/inkgd is a
 # real shipped dependency; only the linked GdUnit4 test addon stays private.

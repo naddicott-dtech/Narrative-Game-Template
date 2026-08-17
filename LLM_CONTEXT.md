@@ -47,6 +47,11 @@ short, specific answers.
   its full reading time.
 - **ChoiceButton** (`scenes/ui/ChoiceButton.tscn` + `.gd`) is duplicated once
   per choice at runtime. Restyle this one scene to restyle every choice.
+- **Errors show on screen:** every `[Narrative]` error is appended to the
+  story text **and** shown in a red strip along the bottom of the screen (a
+  Label named `ErrorBanner` that `NarrativePanel` creates while the game
+  runs — it is not in the saved scene). The strip disappears when a story
+  loads and starts successfully.
 
 ## Common `[Narrative]` errors → likely fixes
 
@@ -94,6 +99,30 @@ short, specific answers.
   ```
 
   (`not event.echo` stops a held-down key from racing through the story.)
+
+## Publishing to the web (HTML5)
+
+The finished game ships as a browser game. In the Godot editor:
+**Project → Export… → Add… → Web**, then check three things in the preset:
+
+- **Resources tab → "Filters to export non-resource files/folders"** must
+  contain `*.json` — otherwise the export ships **without the story** and the
+  browser shows a red `[Narrative] Cannot open Ink JSON` error.
+- **Thread Support: off** — the game then runs on any ordinary web host with
+  no special server setup.
+- Export into the project's `export/web/` folder with the filename
+  `index.html`.
+
+A web export **cannot run by double-clicking `index.html`** (`file://` is
+blocked by browsers). It needs a web server: an upload site works, or locally
+run `python3 -m http.server 8000` in a terminal inside `export/web/` and open
+`http://localhost:8000`.
+
+| Works in the editor, broken in the browser | Likely fix |
+|---|---|
+| Red `Cannot open Ink JSON` only in the browser | Add `*.json` to the export filter above, re-export. |
+| Blank/black page, nothing loads | It was opened via `file://`, or files are missing — serve over http and upload the **whole** export folder. |
+| Story plays but recent changes are missing | Stale export or browser cache — re-export after every change, then hard-reload (Cmd+Shift+R). |
 
 ## Story authoring reminders (Inky side)
 

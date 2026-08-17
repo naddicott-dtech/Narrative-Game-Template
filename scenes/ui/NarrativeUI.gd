@@ -9,6 +9,9 @@
 # All six references below must be assigned in the Inspector. If one is
 # missing, the panel reports a single clear [Narrative] error and refuses to
 # start, instead of crashing somewhere confusing later.
+#
+# Every [Narrative] error also lights up a red banner along the bottom of the
+# screen, because a published browser game has no visible Output panel.
 extends Control
 
 ## The two ways story text can be shown. Pick one in the Inspector.
@@ -42,6 +45,11 @@ enum PresentationMode {
 # that, so a half-wired panel can never silently eat story beats.
 var _setup_ok := false
 
+# A red error strip along the bottom, created in code and hidden until
+# something goes wrong. In an exported browser game nobody can see Godot's
+# Output panel, so every [Narrative] error is also shown on screen.
+var _error_banner: Label = null
+
 # The auto-play clock, created in code. One-shot: each beat winds it up once.
 var _auto_timer: Timer = null
 # How long the currently shown beat should stay up in auto-play.
@@ -51,9 +59,12 @@ var _auto_delay := 0.0
 var _auto_advance_ok := false
 
 func _ready() -> void:
+	_error_banner = _make_error_banner()
+	add_child(_error_banner)
+
 	var missing := _missing_references()
 	if not missing.is_empty():
-		push_error(
+		_report_error(
 			"[Narrative] NarrativePanel is missing Inspector references: "
 			+ ", ".join(missing)
 			+ ". Select NarrativePanel and assign them in the Inspector."
@@ -61,7 +72,7 @@ func _ready() -> void:
 		return
 
 	if not _choice_scene_is_usable():
-		push_error(
+		_report_error(
 			"[Narrative] Choice Button Scene must be ChoiceButton.tscn — a Button "
 			+ "with ChoiceButton.gd attached. Fix it on NarrativePanel in the Inspector."
 		)
@@ -105,9 +116,11 @@ func _advance() -> void:
 		director.continue_story()
 
 func _on_story_started() -> void:
-	# A fresh story must not inherit the previous story's ticking clock.
+	# A fresh story must not inherit the previous story's ticking clock —
+	# or its error banner.
 	_pause_auto_play()
 	story_text.text = ""
+	_error_banner.visible = false
 	_clear_choices()
 
 func _on_beat_ready(text: String, _tags: Array) -> void:
@@ -144,13 +157,15 @@ func _on_story_ended() -> void:
 	_pause_auto_play()
 
 func _on_narrative_failed(message: String) -> void:
-	# Keep the last good text visible and add the error beneath it, so the
-	# problem is on screen even when nobody is watching the Output panel.
+	# Keep the last good text visible, add the error beneath it, and light up
+	# the red banner — the problem must be on screen, not just in the Output
+	# panel (which browser players can never see).
 	_pause_auto_play()
 	_clear_choices()
 	if story_text.text != "" and not story_text.text.ends_with("\n"):
 		story_text.text += "\n"
 	story_text.text += message + "\n"
+	_show_error_banner(message)
 	_scroll_to_bottom()
 
 # The player flipped the Auto switch. On: time the beat that is up right now.
@@ -171,6 +186,28 @@ func _pause_auto_play() -> void:
 # time that grows with the length of the line.
 func _auto_play_delay_for(text: String) -> float:
 	return maxf(auto_play_min_seconds, text.length() * auto_play_seconds_per_character)
+
+# Builds the hidden red strip that failures light up. Anchored along the
+# bottom edge; long messages wrap and grow upward.
+func _make_error_banner() -> Label:
+	var banner := Label.new()
+	banner.name = "ErrorBanner"
+	banner.visible = false
+	banner.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	banner.add_theme_color_override("font_color", Color.RED)
+	banner.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	banner.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	return banner
+
+func _show_error_banner(message: String) -> void:
+	_error_banner.text = message
+	_error_banner.visible = true
+
+# For the panel's own setup errors: one console error, and the same message
+# on screen.
+func _report_error(message: String) -> void:
+	push_error(message)
+	_show_error_banner(message)
 
 func _clear_choices() -> void:
 	# Take each button out of the container right away — if the story jumps
