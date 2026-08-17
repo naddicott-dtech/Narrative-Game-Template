@@ -17,6 +17,9 @@ const OLDEST_SUPPORTED_INK_VERSION := 18
 var has_failed := false
 var last_error := ""
 
+# Remembered so a later runtime problem can still say which file it came from.
+var _active_json_path := ""
+
 func load_from_path(json_path: String, ink_runtime: Node) -> InkStory:
 	has_failed = false
 	last_error = ""
@@ -56,12 +59,33 @@ func load_from_path(json_path: String, ink_runtime: Node) -> InkStory:
 			% [ink_version, OLDEST_SUPPORTED_INK_VERSION, json_path]
 		)
 
+	_active_json_path = json_path
+	_watch_runtime_exceptions(ink_runtime)
+
 	var story := InkStory.new(json_text, ink_runtime)
+	if has_failed:
+		# The runtime hit an exception while building the story (reported
+		# through _on_runtime_exception). The story object is not trustworthy.
+		return null
 	if story == null or story.state == null:
 		return _fail("[Narrative] Ink runtime could not create story: " + json_path)
 
 	story.on_error.connect(_on_story_error)
 	return story
+
+# The Ink runtime normally reports internal exceptions two different ways:
+# in an exported game it only emits a signal (silent if nobody listens), and
+# during development it can freeze the game on an assert deep inside the
+# addon. Neither helps a student. We turn both paths into one loud
+# [Narrative] error instead.
+func _watch_runtime_exceptions(ink_runtime: Node) -> void:
+	ink_runtime.stop_execution_on_exception = false
+	ink_runtime.stop_execution_on_error = false
+	if not ink_runtime.exception_raised.is_connected(_on_runtime_exception):
+		ink_runtime.exception_raised.connect(_on_runtime_exception)
+
+func _on_runtime_exception(message: String, _stack_trace) -> void:
+	_fail("[Narrative] Ink runtime exception in %s: %s" % [_active_json_path, message])
 
 func _on_story_error(message: String, _error_type) -> void:
 	_fail("[Narrative] Ink story error: " + message)
