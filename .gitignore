@@ -4,6 +4,8 @@
 
 # Local HTML5 exports (Project -> Export... -> Web) — builds never belong in git
 /export/
+/html_export/
+/html_export.zip
 
 # Dev-only test harness (symlinked in by scripts/link-dev.sh) and its generated
 # reports — never ship to students. The Ink runtime under /addons/inkgd is a

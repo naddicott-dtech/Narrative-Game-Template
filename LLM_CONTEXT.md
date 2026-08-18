@@ -152,28 +152,25 @@ The narrator returns. # @speaker: none
 
 ## Publishing to the web (HTML5)
 
-The finished game ships as a browser game. In the Godot editor:
-**Project → Export… → Add… → Web**, then check three things in the preset:
-
-- **Resources tab → "Filters to export non-resource files/folders"** must
-  contain `*.json` — otherwise the export ships **without the story** and the
-  browser shows a red `[Narrative] Cannot open Ink JSON` error.
-- **Thread Support: off** — the game then runs on any ordinary web host with
-  no special server setup.
-- Export into the project's `export/web/` folder with the filename
-  `index.html`.
+The finished game ships as a browser game. This project already includes a
+ready **Web** export preset (Project → Export…): Thread Support is off (so
+the game runs on any ordinary web host with no special server setup), and it
+exports to the project's `html_export/` folder as `index.html`. Compiled Ink
+`.json` story files are included automatically — JSON is a normal Godot
+resource, no extra filter needed. Click **Export Project…** and you're done.
+(First time on a new machine: Editor → Manage Export Templates → download.)
 
 A web export **cannot run by double-clicking `index.html`** (`file://` is
 blocked by browsers). It needs a web server: an upload site works, or locally
-run `python3 -m http.server 8000` in a terminal inside `export/web/` and open
-`http://localhost:8000`.
+run `python3 -m http.server 8000` in a terminal inside `html_export/` and
+open `http://localhost:8000`.
 
 Browsers also pause a game whose tab is in the background — auto-play seems
 to stop, then resumes when the player returns to the tab. Normal, not a bug.
 
 | Works in the editor, broken in the browser | Likely fix |
 |---|---|
-| Red `Cannot open Ink JSON` only in the browser | Add `*.json` to the export filter above, re-export. |
+| Red `Cannot open Ink JSON` only in the browser | The story file was added after the last export, or sits outside the project folder — check its path, then re-export. |
 | Blank/black page, nothing loads | It was opened via `file://`, or files are missing — serve over http and upload the **whole** export folder. |
 | Story plays but recent changes are missing | Stale export or browser cache — re-export after every change, then hard-reload (Cmd+Shift+R). |
 
