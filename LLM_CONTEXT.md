@@ -52,6 +52,50 @@ short, specific answers.
   Label named `ErrorBanner` that `NarrativePanel` creates while the game
   runs — it is not in the saved scene). The strip disappears when a story
   loads and starts successfully.
+- **NarrativeStage** (node: `Main/UI/NarrativeStage`, script
+  `scenes/ui/NarrativeStage.gd`) performs story cues — Ink tags that start
+  with `@`. The director's Inspector field **Cue Stage** points at it.
+  Today it runs one command: `@speaker`.
+
+## Story cues: @speaker
+
+In Inky, end a line with a cue tag:
+
+```ink
+Maya waves hello. # @speaker: maya
+The narrator returns. # @speaker: none
+```
+
+- `# @speaker: maya` looks for a **SpeakerLink** node under
+  `NarrativeStage/Links` whose **Cue Name** is `maya`, then shows its
+  **Display Name** and **Portrait**. Name and portrait stay up until the
+  next `@speaker` cue.
+- `# @speaker: none` clears both (back to the narrator). `none` is a
+  reserved word, not a character.
+- **Add a character:** select an existing SpeakerLink under
+  `NarrativeStage/Links`, duplicate it (Cmd+D), rename the node, and set
+  its Cue Name / Display Name / Portrait in the Inspector. The Cue Name
+  must match the Ink tag exactly (lowercase snake_case).
+- A cue value with no matching SpeakerLink stops the game with an error
+  that lists the known names — check spelling on both sides.
+- Portraits start as labeled placeholder art in `assets/placeholders/` —
+  replace them with the student's own images (drag the file into the
+  FileSystem dock, then point the link's Portrait field at it).
+- After a successful cue the game posts `SignalBus.speaker_changed` (the
+  bulletin-board pattern). Code tweak — react to the speaker changing:
+
+  ```gdscript
+  func _ready() -> void:
+      SignalBus.speaker_changed.connect(_on_speaker_changed)
+
+  func _on_speaker_changed(speaker_name: String) -> void:
+      print("Now speaking: ", speaker_name)  # "none" means the narrator
+  ```
+
+- Cue rules: one `@command: value` per tag (a beat may carry several tags),
+  lowercase command names, and the same command can't repeat on one beat.
+  Any other `@` command (like `@music`) is not run by this version yet and
+  stops the game loudly.
 
 ## Common `[Narrative]` errors → likely fixes
 
@@ -62,7 +106,13 @@ short, specific answers.
 | `Invalid JSON` / `missing 'inkVersion'` | The file isn't a compiled Ink export. In Inky use **File → Export to JSON** (not "save .ink"). |
 | `Ink version N is newer/older` | Re-export from a current Inky; this template plays Ink v18–v21. |
 | `Ink runtime exception` | The compiled file is damaged or hand-edited. Re-export from Inky; don't edit the JSON by hand. |
-| `Unsupported reserved cue "@..."` | The story uses a `# @something` tag. `@` tags are reserved for game commands that this template version doesn't run yet — remove the `@` tag in Inky, or use a plain tag (no `@`). |
+| `Unsupported reserved cue "@..."` | The story uses an `@` command this version doesn't run (only `@speaker` works today). Remove the tag in Inky, or use a plain tag (no `@`). |
+| `Malformed cue "..."` | An `@` tag isn't shaped like `# @command: value` — check for a missing colon, empty value, or capital letters in the command. |
+| `Two "@..." cues on one beat` | The same command appears twice on one story line — keep one. |
+| `Story uses cues but ... no Cue Stage assigned` | Select `NarrativeDirector`, point **Cue Stage** at the `NarrativeStage` node. |
+| `No SpeakerLink named "..."` | The cue value doesn't match any SpeakerLink's Cue Name — the message lists the names that do exist. Fix the spelling in Inky or in the link. |
+| `SpeakerLink "..." has no Display Name` | Select that link under `NarrativeStage/Links` and fill in Display Name. |
+| `NarrativeStage is missing its ... reference` | Select `NarrativeStage` and assign the reference it names. |
 | `Choice N does not exist` | Code called `choose()` with a bad number — choices are numbered from 0. |
 | `NarrativePanel is missing Inspector references` | Select `NarrativePanel` and assign the references it lists. |
 
@@ -132,8 +182,10 @@ to stop, then resumes when the player returns to the tab. Normal, not a bug.
 - Write and test the story in Inky; **File → Export to JSON** into the
   project's `stories/` folder.
 - Plain tags like `# author: Sam` are fine and ignored by the game.
-- Tags starting with `@` are reserved for future game commands — avoid them
-  for now (the game will stop with an error if it meets one).
+- Tags starting with `@` are game commands. `@speaker` works today (see the
+  cues section above); any other `@` command stops the game with an error.
+- No cue needed for a plain script style — writing "(Maya) Hello." straight
+  in the story text is always fine.
 
 ## For the student
 

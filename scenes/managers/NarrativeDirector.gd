@@ -13,9 +13,14 @@ extends Node
 ## The compiled story exported from Inky. Set this in the Inspector.
 @export_file("*.json") var story_file: String = ""
 
+## Where story cues ("# @speaker: maya") are performed. A story with no cues
+## never needs this; a story WITH cues stops loudly if it is missing.
+@export var cue_stage: NarrativeStage
+
 ## A fresh story just began (also fires on restart). The UI clears itself.
 signal story_started
-## One new story line is ready to show. Tags are Ink's extra "# notes".
+## One new story line is ready to show. Tags are Ink's ordinary "# notes" —
+## cue tags (starting with @) are performed by the stage and never arrive here.
 signal beat_ready(text: String, tags: Array)
 ## The story is waiting for the player to pick one of these.
 signal choices_ready(choice_texts: Array)
@@ -131,18 +136,28 @@ func continue_story() -> void:
 	if has_failed:
 		return  # the runtime hit an exception mid-line; already reported
 
-	var tags: Array = _story.current_tags.duplicate()
-	var reserved_cue := _first_reserved_cue(tags)
-	if reserved_cue != "":
-		# The cue asked Godot to do something we cannot do yet, so showing
-		# this beat would pretend it worked. Fail before displaying it.
+	# Every cue on this beat must fully succeed BEFORE the beat is shown —
+	# a beat whose requested change didn't happen would be a lie on screen.
+	var parsed: Dictionary = CueParser.parse(_story.current_tags.duplicate())
+	if parsed["error"] != "":
+		_fail(parsed["error"])
+		return
+	var cues: Array = parsed["cues"]
+	if not cues.is_empty() and cue_stage == null:
 		_fail(
-			'[Narrative] Unsupported reserved cue "%s" at "%s" — cue commands arrive with the cue slice'
-			% [reserved_cue, text.strip_edges()]
+			"[Narrative] Story uses cues but NarrativeDirector has no Cue Stage "
+			+ "assigned. Select NarrativeDirector and set 'Cue Stage' in the Inspector."
 		)
 		return
+	for cue in cues:
+		var cue_error: String = cue_stage.execute_cue(
+			cue["command"], cue["value"], text.strip_edges()
+		)
+		if cue_error != "":
+			_fail(cue_error)
+			return
 
-	beat_ready.emit(text, tags)
+	beat_ready.emit(text, parsed["plain_tags"])
 	_report_stop_point()
 
 func choose(choice_index: int) -> void:
@@ -178,13 +193,6 @@ func _report_stop_point() -> void:
 	else:
 		_story_over = true
 		story_ended.emit()
-
-func _first_reserved_cue(tags: Array) -> String:
-	for tag in tags:
-		var trimmed := str(tag).strip_edges()
-		if trimmed.begins_with("@"):
-			return trimmed
-	return ""
 
 # The loader already printed its own [Narrative] error; only record and relay.
 func _on_loader_failed(message: String) -> void:
