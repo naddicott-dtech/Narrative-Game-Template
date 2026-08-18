@@ -66,14 +66,14 @@ Maya waves hello. # @speaker: maya
 The narrator returns. # @speaker: none
 ```
 
-- `# @speaker: maya` looks for a **SpeakerLink** node under
-  `NarrativeStage/Links` whose **Cue Name** is `maya`, then shows its
+- `# @speaker: maya` looks for a **SpeakerLink** node anywhere under
+  `NarrativeStage` whose **Cue Name** is `maya`, then shows its
   **Display Name** and **Portrait**. Name and portrait stay up until the
   next `@speaker` cue.
 - `# @speaker: none` clears both (back to the narrator). `none` is a
   reserved word, not a character.
 - **Add a character:** select an existing SpeakerLink under
-  `NarrativeStage/Links`, duplicate it (Cmd+D), rename the node, and set
+  `NarrativeStage`, duplicate it (Cmd+D), rename the node, and set
   its Cue Name / Display Name / Portrait in the Inspector. The Cue Name
   must match the Ink tag exactly (lowercase snake_case).
 - A cue value with no matching SpeakerLink stops the game with an error
@@ -111,7 +111,7 @@ The narrator returns. # @speaker: none
 | `Two "@..." cues on one beat` | The same command appears twice on one story line — keep one. |
 | `Story uses cues but ... no Cue Stage assigned` | Select `NarrativeDirector`, point **Cue Stage** at the `NarrativeStage` node. |
 | `No SpeakerLink named "..."` | The cue value doesn't match any SpeakerLink's Cue Name — the message lists the names that do exist. Fix the spelling in Inky or in the link. |
-| `SpeakerLink "..." has no Display Name` | Select that link under `NarrativeStage/Links` and fill in Display Name. |
+| `SpeakerLink "..." has no Display Name` | Select that link under `NarrativeStage` and fill in Display Name. |
 | `NarrativeStage is missing its ... reference` | Select `NarrativeStage` and assign the reference it names. |
 | `Choice N does not exist` | Code called `choose()` with a bad number — choices are numbered from 0. |
 | `NarrativePanel is missing Inspector references` | Select `NarrativePanel` and assign the references it lists. |
