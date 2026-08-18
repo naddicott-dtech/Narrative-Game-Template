@@ -29,3 +29,7 @@ signal day_ended(day_number)      # posted when a new day begins
 
 @warning_ignore("UNUSED_SIGNAL")
 signal tick(delta_time)           # posted every single frame (see TimeManager)
+
+@warning_ignore("UNUSED_SIGNAL")
+signal speaker_changed(speaker_name)  # posted after a "@speaker:" story cue
+									  # succeeds ("none" = the narrator)
