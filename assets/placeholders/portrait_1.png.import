@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cm58si2vi1142"
-path="res://.godot/imported/portrait_1.svg-2d15e5e0e5fb26770ef897a8fec117f4.ctex"
+uid="uid://dy6fxupkd3flv"
+path="res://.godot/imported/portrait_1.png-80ea104fd773cd76c3eb2ed1a8fb8071.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/placeholders/portrait_1.svg"
-dest_files=["res://.godot/imported/portrait_1.svg-2d15e5e0e5fb26770ef897a8fec117f4.ctex"]
+source_file="res://assets/placeholders/portrait_1.png"
+dest_files=["res://.godot/imported/portrait_1.png-80ea104fd773cd76c3eb2ed1a8fb8071.ctex"]
 
 [params]
 
@@ -38,6 +38,3 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=1.0
-editor/scale_with_editor_scale=false
-editor/convert_colors_with_editor_theme=false

@@ -33,3 +33,10 @@ signal tick(delta_time)           # posted every single frame (see TimeManager)
 @warning_ignore("UNUSED_SIGNAL")
 signal speaker_changed(speaker_name)  # posted after a "@speaker:" story cue
 									  # succeeds ("none" = the narrator)
+
+@warning_ignore("UNUSED_SIGNAL")
+signal story_started                  # posted when a story (re)starts cleanly
+
+@warning_ignore("UNUSED_SIGNAL")
+signal narrative_failed(message)      # posted with every [Narrative] error, so
+									  # anything on screen can react (ErrorBanner)

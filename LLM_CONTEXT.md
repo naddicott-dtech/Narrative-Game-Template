@@ -2,9 +2,10 @@
 
 You are helping a high-school student customize a **narrative game template**
 in **Godot 4.5** (GDScript only — no C#). The student wrote a story in the
-**Inky** editor, exported it as a compiled `.json`, and this template plays it.
-Your job is to **guide small tweaks, not build features for them**. Prefer
-short, specific answers.
+**Inky** editor, exported it as a compiled `.json`, and this template plays it
+like a visual novel: a full-screen background, character portraits left and
+right, and a dialogue box along the bottom. Your job is to **guide small
+tweaks, not build features for them**. Prefer short, specific answers.
 
 ## Ground rules for you, the assistant
 
@@ -14,7 +15,8 @@ short, specific answers.
    lines.
 2. **Never suggest editing** `.tscn` files as text, `project.godot`, or
    anything inside `addons/inkgd/` (that folder is the Ink engine — treat it
-   as sealed).
+   as sealed). Opening a `.tscn` in the editor and changing things in the
+   Inspector is the normal way to work — that's fine.
 3. This project targets **Godot 4.5**. Do not use Godot 3 syntax
    (`onready var`, `export var`, `yield`, `connect("sig", self, "m")` are all
    wrong; use `@onready`, `@export`, `await`, `sig.connect(m)`).
@@ -22,40 +24,73 @@ short, specific answers.
    what is wrong — read them literally; the fix is usually named in the
    message.
 
+## Before you start (the three things everyone gets stuck on)
+
+- **Two scene files.** `scenes/Main.tscn` is the frame — open it to change
+  the **Story File** (on `NarrativeDirector`). `scenes/narrative/NarrativeScene.tscn`
+  is the story view — open it (double-click in the FileSystem dock) to change
+  anything you *see*: characters (`Stage/Links`), the background, the dialogue
+  box, the choices. In Main.tscn, `NarrativeScene` appears as one closed node;
+  that's normal.
+- **Where things are in the editor:** the **Scene panel** (node tree) is top
+  left, the **Inspector** (properties of the selected node) is on the right,
+  the **FileSystem dock** (your project's files) is bottom left.
+- **Using your own picture:** drag the image file from Finder into the
+  FileSystem dock (onto the `assets/` folder). Then select the node that
+  should show it and drag the file from the FileSystem dock onto its
+  **Portrait** (or **Texture**) field — or click the field and choose **Load**.
+- **After any change in Inky:** File → Export to JSON again (same file name,
+  into `stories/`), then press Play again in Godot. Nothing else to redo.
+
 ## How the game works
 
 - The student's story: one compiled JSON file, usually in `stories/`.
+- **Main** (`scenes/Main.tscn`) is the frame that never changes while the
+  game runs: `Managers` (the story engine), `WorldRoot` (holds the ONE scene
+  currently on screen), and `UI` (things that stay on screen no matter what).
 - **NarrativeDirector** (node: `Main/Managers/NarrativeDirector`, script
   `scenes/managers/NarrativeDirector.gd`) runs the story. Its Inspector field
-  **Story File** points at the JSON. It emits signals: `story_started`,
-  `beat_ready(text, tags)`, `choices_ready(choice_texts)`, `story_ended`,
-  `narrative_failed(message)`. Its methods: `load_story(path)`,
-  `start_story()`, `continue_story()`, `choose(index)`.
-- **NarrativePanel** (node: `Main/UI/NarrativePanel`, script
-  `scenes/ui/NarrativeUI.gd`) shows the text and choices. Click anywhere (or
-  press Space/Enter) to advance. It has six Inspector references that must
-  all be assigned: Director, Story Text, Story Scroll, Choices Container,
-  Choice Button Scene, Auto Play Toggle.
-- The panel's Inspector also has **Presentation Mode**: `Build Down` (lines
-  pile up and the page scrolls) or `One Beat At A Time` (the screen clears
-  and shows only the newest line).
-- **Auto-play:** the "Auto" switch (node `AutoPlayToggle`, top right) makes
-  the story advance itself. Each line stays up for
-  `max(Auto Play Min Seconds, line length × Auto Play Seconds Per Character)`
-  — then it advances. Auto-play always waits at choices, endings, and errors;
-  a manual click during auto-play advances at once and gives the next line
-  its full reading time.
+  **Story File** points at the JSON. *(For the assistant, code-level:)* it
+  emits signals `story_started`, `beat_ready(text, tags)`,
+  `choices_ready(choice_texts)`, `story_ended`, `narrative_failed(message)`;
+  its methods are `load_story(path)`, `start_story()`, `continue_story()`,
+  `choose(index)`.
+- **NarrativeScene** (node: `Main/WorldRoot/NarrativeScene`, its own scene
+  file `scenes/narrative/NarrativeScene.tscn`, script
+  `scenes/narrative/NarrativeScene.gd`) is the story view — everything the
+  player sees. Click anywhere (or press Space/Enter) to advance. It finds the
+  director by itself; its five Inspector references must all be assigned:
+  Story Text, Story Scroll, Choices Container, Choice Button Scene, Auto Play
+  Toggle (they are, in the shipped scene).
+- Inside NarrativeScene:
+  - `Stage` — the art layer (see the cues section): `Background`,
+    `LeftPortrait`, `RightPortrait`, and the `Links` folder of characters.
+  - `DialogueBox` — the dark panel along the bottom. Inside its `Rows`:
+    `SpeakerLabel` (who is talking) above `StoryScroll/StoryText` (what they
+    say).
+  - `ChoicesScroll/ChoicesContainer` — choices appear here, stacked in the
+    upper-middle of the screen.
+  - `AutoPlayToggle` — the "Auto" switch, top right.
+- A **beat** is one chunk of story text the game shows before waiting for a
+  click — normally one line (one paragraph) in Inky.
+- The scene's Inspector has **Presentation Mode**: `One Beat At A Time` (the
+  default — the box shows only the newest beat) or `Build Down` (beats pile
+  up and the box scrolls, like a text adventure).
+- **Auto-play:** the "Auto" switch makes the story advance itself. Each line
+  stays up for `max(Auto Play Min Seconds, line length × Auto Play Seconds
+  Per Character)` — then it advances. Auto-play always waits at choices,
+  endings, and errors; a manual click during auto-play advances at once and
+  gives the next line its full reading time.
 - **ChoiceButton** (`scenes/ui/ChoiceButton.tscn` + `.gd`) is duplicated once
   per choice at runtime. Restyle this one scene to restyle every choice.
 - **Errors show on screen:** every `[Narrative]` error is appended to the
-  story text **and** shown in a red strip along the bottom of the screen (a
-  Label named `ErrorBanner` that `NarrativePanel` creates while the game
-  runs — it is not in the saved scene). The strip disappears when a story
-  loads and starts successfully.
-- **NarrativeStage** (node: `Main/UI/NarrativeStage`, script
-  `scenes/ui/NarrativeStage.gd`) performs story cues — Ink tags that start
-  with `@`. The director's Inspector field **Cue Stage** points at it.
-  Today it runs one command: `@speaker`.
+  story text **and** shown in a red strip along the bottom of the screen — the
+  `ErrorBanner` node at `Main/UI/ErrorBanner`. It listens to the bulletin
+  board (`SignalBus.narrative_failed`) and hides when a story starts cleanly.
+- *(For the assistant, code-level:)* **SignalBus** (`autoload/SignalBus.gd`)
+  is the bulletin board: scripts post announcements there and anyone can
+  listen. Story-related posts: `story_started`, `narrative_failed(message)`,
+  `speaker_changed(name)`.
 
 ## Story cues: @speaker
 
@@ -66,23 +101,37 @@ Maya waves hello. # @speaker: maya
 The narrator returns. # @speaker: none
 ```
 
-- `# @speaker: maya` looks for a **SpeakerLink** node anywhere under
-  `NarrativeStage` whose **Cue Name** is `maya`, then shows its
-  **Display Name** and **Portrait**. Name and portrait stay up until the
-  next `@speaker` cue.
-- `# @speaker: none` clears both (back to the narrator). `none` is a
-  reserved word, not a character.
-- **Add a character:** select an existing SpeakerLink under
-  `NarrativeStage`, duplicate it (Cmd+D), rename the node, and set
-  its Cue Name / Display Name / Portrait in the Inspector. The Cue Name
-  must match the Ink tag exactly (lowercase snake_case).
+- `# @speaker: maya` looks for a **SpeakerLink** node under
+  `NarrativeScene/Stage/Links` whose **Cue Name** is `maya`, shows its
+  **Display Name** above the text, and puts its **Portrait** in the slot
+  chosen by its **Side** (Left or Right). The speaking character is bright;
+  the other slot dims. Name and portrait stay up until the next `@speaker`.
+- `# @speaker: none` clears the name and dims both portraits (the narrator is
+  talking; the cast stays on screen). `none` is a reserved word, not a
+  character. Portraits leave the screen when a new story starts.
+- **Add a character:** select `MayaLink` or `GuideLink` under
+  `NarrativeScene/Stage/Links`, duplicate it (Cmd+D — the copy appears as
+  `MayaLink2`), rename it (double-click its name in the Scene panel), and
+  set its Cue Name / Display Name / Portrait / Side in the Inspector. The
+  node's own name is just a label for you; what matters is that **Cue Name
+  matches the Ink tag exactly**. Capitals work if both sides match, but
+  lowercase words joined by underscores (`dispatcher`, `old_man`) mean you
+  never have to think about it.
+- **A character with several expressions:** make one SpeakerLink per
+  expression with different Cue Names (`maya`, `maya_angry`) pointing at
+  different image files, and use the matching tag in Inky.
+- **A voice with no picture** (a radio, an off-screen shout): leave Portrait
+  empty. The name shows; nobody on screen is lit.
 - A cue value with no matching SpeakerLink stops the game with an error
   that lists the known names — check spelling on both sides.
-- Portraits start as labeled placeholder art in `assets/placeholders/` —
-  replace them with the student's own images (drag the file into the
-  FileSystem dock, then point the link's Portrait field at it).
-- After a successful cue the game posts `SignalBus.speaker_changed` (the
-  bulletin-board pattern). Code tweak — react to the speaker changing:
+- Portraits start as labeled placeholder art in `assets/placeholders/`
+  (`portrait_1.png`, `portrait_2.png`, 300×450 px) — replace them with the
+  student's own images (see "Before you start"). Any size works: the slot is
+  300×450 and the picture is shrunk to fit, keeping its shape, never cropped.
+  A tall portrait-shaped image fills the slot best.
+- *(For the assistant, code-level:)* after a successful cue the game posts
+  `SignalBus.speaker_changed` (the bulletin-board pattern). Code tweak —
+  react to the speaker changing:
 
   ```gdscript
   func _ready() -> void:
@@ -107,30 +156,48 @@ The narrator returns. # @speaker: none
 | `Ink version N is newer/older` | Re-export from a current Inky; this template plays Ink v18–v21. |
 | `Ink runtime exception` | The compiled file is damaged or hand-edited. Re-export from Inky; don't edit the JSON by hand. |
 | `Unsupported reserved cue "@..."` | The story uses an `@` command this version doesn't run (only `@speaker` works today). Remove the tag in Inky, or use a plain tag (no `@`). |
-| `Malformed cue "..."` | An `@` tag isn't shaped like `# @command: value` — check for a missing colon, empty value, or capital letters in the command. |
+| `Malformed cue "..."` | An `@` tag isn't shaped like `# @command: value` — a missing colon, an empty value, or a capital letter in the *command* part (`@Speaker`). (The *value* may have capitals — `@speaker: Dispatcher` — as long as the Cue Name matches exactly; if not, you get "No SpeakerLink named" instead.) |
 | `Two "@..." cues on one beat` | The same command appears twice on one story line — keep one. |
-| `Story uses cues but ... no Cue Stage assigned` | Select `NarrativeDirector`, point **Cue Stage** at the `NarrativeStage` node. |
-| `No SpeakerLink named "..."` | The cue value doesn't match any SpeakerLink's Cue Name — the message lists the names that do exist. Fix the spelling in Inky or in the link. |
-| `SpeakerLink "..." has no Display Name` | Select that link under `NarrativeStage` and fill in Display Name. |
-| `NarrativeStage is missing its ... reference` | Select `NarrativeStage` and assign the reference it names. |
+| `Story uses cues but there is no NarrativeStage in the scene tree` | The `Stage` node (inside `NarrativeScene`) is missing from the running scene — usually `NarrativeScene` was deleted from `Main/WorldRoot` or the Stage was removed. Put it back (undo, or re-instance `scenes/narrative/NarrativeScene.tscn` under `WorldRoot`). |
+| `No SpeakerLink named "..."` | The cue value doesn't match any SpeakerLink's Cue Name — the message lists the names that do exist. Fix the spelling in Inky (then re-export the JSON) or in the link's Cue Name, and press Play again. |
+| `SpeakerLink "..." has no Display Name` | Select that link under `Stage/Links` and fill in Display Name. |
+| `NarrativeStage is missing its ... reference` | Select `Stage` and assign the reference it names (Background, Left Portrait, Right Portrait, or Speaker Label). |
+| `NarrativeScene found no NarrativeDirector` | `Main.tscn` has no `NarrativeDirector` under `Managers` — put it back (undo, or add a Node named NarrativeDirector with `scenes/managers/NarrativeDirector.gd` attached). |
+| `NarrativeScene is missing Inspector references` | Select `NarrativeScene` and assign the references it lists. |
 | `Choice N does not exist` | Code called `choose()` with a bad number — choices are numbered from 0. |
-| `NarrativePanel is missing Inspector references` | Select `NarrativePanel` and assign the references it lists. |
 
 ## Little tweaks (Inspector first)
 
-- **Play a different story:** select `NarrativeDirector` → Inspector →
-  **Story File** → pick your exported `.json`.
-- **Bigger story text:** select `StoryText` → Inspector → Theme Overrides →
-  Font Sizes → **Normal Font Size**.
+- **Play a different story:** open `Main.tscn`, select `NarrativeDirector` →
+  Inspector → **Story File** → pick your exported `.json`. The example story
+  can stay in `stories/`; nothing else to remove.
+- **Change the background picture:** select `NarrativeScene/Stage/Background`
+  → Inspector → **Texture** → pick an image (drag it into the FileSystem
+  dock first). This is the picture behind everything.
+- **Bigger story text:** select `StoryText` (under
+  `NarrativeScene/DialogueBox/Rows/StoryScroll`) → Inspector → Theme
+  Overrides → Font Sizes → **Normal Font Size**.
+- **Bigger speaker name:** select `SpeakerLabel` → Theme Overrides → Font
+  Sizes → **Font Size**. (A Label calls it Font Size; the RichTextLabel
+  above calls it Normal Font Size — same idea.)
+- **Dialogue box color or transparency:** select `DialogueBox` → Theme
+  Overrides → Styles → **Panel** → click the StyleBoxFlat → **BG Color**.
+- **Taller/shorter dialogue box:** select `DialogueBox`, then in the
+  Inspector open **Layout → Transform**: the box is pinned to the bottom of
+  the screen, so its height is the **Offset Top** number — more negative =
+  taller (−254 is the default; try −320). Or just drag its top edge in the
+  2D view.
+- **Move or resize a portrait slot:** select `LeftPortrait` or
+  `RightPortrait` under `Stage` and drag it in the 2D view, or edit its
+  offsets in Layout.
 - **Style the choice buttons:** open `scenes/ui/ChoiceButton.tscn`, select the
   Button, use Theme Overrides (colors, font size, styleboxes). Every choice
   updates at once.
-- **Roomier choice area:** select `ChoicesScroll` → drag its top edge, or
-  adjust its anchors/offsets in the Inspector.
-- **Screen clears between lines (or stops clearing):** select
-  `NarrativePanel` → Inspector → **Presentation Mode** → pick `Build Down`
-  or `One Beat At A Time`.
-- **Auto-play reading speed:** select `NarrativePanel` → Inspector →
+- **Where the choices appear:** select `ChoicesScroll` → Layout → adjust its
+  anchors/offsets (it is centered in the upper-middle of the screen).
+- **Text adventure look (lines pile up):** select `NarrativeScene` →
+  Inspector → **Presentation Mode** → `Build Down`.
+- **Auto-play reading speed:** select `NarrativeScene` → Inspector →
   Auto Play → **Auto Play Seconds Per Character** (higher = slower) and
   **Auto Play Min Seconds** (the shortest *automatic* wait — a manual click
   can still advance sooner).
@@ -138,9 +205,10 @@ The narrator returns. # @speaker: none
   Button Pressed → **On**.
 - **Rename or restyle the Auto switch:** select `AutoPlayToggle` — its Text
   property and Theme Overrides are ordinary Button settings.
-- **Change the advance key (code tweak):** in `scenes/ui/NarrativeUI.gd`,
-  `_unhandled_input` checks Godot's built-in `ui_accept` action (Space/Enter).
-  Example — advance on any key press instead:
+- **Change the advance key (code tweak — assistant writes it, student pastes it):** in
+  `scenes/narrative/NarrativeScene.gd`, `_unhandled_input` checks Godot's
+  built-in `ui_accept` action (Space/Enter). Example — advance on any key
+  press instead:
 
   ```gdscript
   func _unhandled_input(event: InputEvent) -> void:

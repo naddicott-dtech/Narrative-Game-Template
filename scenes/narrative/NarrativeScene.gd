@@ -1,28 +1,29 @@
-# NarrativeUI.gd
+# NarrativeScene.gd
 #
-# The visible half of the story player, attached to the NarrativePanel node.
-# It shows each story beat in the text area, builds one button per choice,
-# and turns the player's clicks (or Space/Enter) into "next line, please".
-# The Auto switch (top right) lets the story read itself: each line stays up
-# long enough to read, then advances — and always waits at choices.
+# The story view: the visible half of the story player, attached to the root
+# of NarrativeScene.tscn. It shows each story beat in the dialogue box,
+# builds one button per choice, and turns the player's clicks (or Space/Enter)
+# into "next line, please". The Auto switch (top right) lets the story read
+# itself: each line stays up long enough to read, then advances — and always
+# waits at choices.
 #
-# All six references below must be assigned in the Inspector. If one is
-# missing, the panel reports a single clear [Narrative] error and refuses to
+# This whole scene is the ONE child of Main's WorldRoot. Later, a story cue can
+# swap it out for a cut scene or another game mode and back again; the story
+# itself lives on in the NarrativeDirector (under Main/Managers), which this
+# scene finds by its group when it appears.
+#
+# The five references below must be assigned in the Inspector. If one is
+# missing, the scene reports a single clear [Narrative] error and refuses to
 # start, instead of crashing somewhere confusing later.
-#
-# Every [Narrative] error also lights up a red banner along the bottom of the
-# screen, because a published browser game has no visible Output panel.
 extends Control
 
 ## The two ways story text can be shown. Pick one in the Inspector.
 enum PresentationMode {
-	BUILD_DOWN,         ## every line stays; new lines build down the page
-	ONE_BEAT_AT_A_TIME, ## the screen clears and shows only the newest line
+	ONE_BEAT_AT_A_TIME, ## the dialogue box shows only the newest line (the default)
+	BUILD_DOWN,         ## every line stays; new lines build down and the box scrolls
 }
 
-## The NarrativeDirector node that runs the story.
-@export var director: NarrativeDirector
-## The RichTextLabel the story text builds down into.
+## The RichTextLabel the story text appears in.
 @export var story_text: RichTextLabel
 ## The ScrollContainer around the story text (auto-scrolls to new lines).
 @export var story_scroll: ScrollContainer
@@ -31,7 +32,7 @@ enum PresentationMode {
 ## The ChoiceButton.tscn scene, duplicated once per choice.
 @export var choice_button_scene: PackedScene
 ## How story text is presented (see PresentationMode above).
-@export var presentation_mode: PresentationMode = PresentationMode.BUILD_DOWN
+@export var presentation_mode: PresentationMode = PresentationMode.ONE_BEAT_AT_A_TIME
 
 @export_group("Auto Play")
 ## The on-screen "Auto" switch (top right) that lets the story read itself.
@@ -41,14 +42,13 @@ enum PresentationMode {
 ## Extra reading time per letter, so longer lines stay up longer.
 @export_range(0.0, 1.0, 0.01, "or_greater") var auto_play_seconds_per_character := 0.05
 
-# False until every Inspector reference checks out; input stays dead before
-# that, so a half-wired panel can never silently eat story beats.
-var _setup_ok := false
+# The NarrativeDirector this scene found in the tree (see _connect_director).
+var director: NarrativeDirector = null
 
-# A red error strip along the bottom, created in code and hidden until
-# something goes wrong. In an exported browser game nobody can see Godot's
-# Output panel, so every [Narrative] error is also shown on screen.
-var _error_banner: Label = null
+# False until every Inspector reference checks out AND a director was found;
+# input stays dead before that, so a half-wired scene can never silently eat
+# story beats.
+var _setup_ok := false
 
 # The auto-play clock, created in code. One-shot: each beat winds it up once.
 var _auto_timer: Timer = null
@@ -59,47 +59,59 @@ var _auto_delay := 0.0
 var _auto_advance_ok := false
 
 func _ready() -> void:
-	_error_banner = _make_error_banner()
-	add_child(_error_banner)
-
 	var missing := _missing_references()
 	if not missing.is_empty():
 		_report_error(
-			"[Narrative] NarrativePanel is missing Inspector references: "
+			"[Narrative] NarrativeScene is missing Inspector references: "
 			+ ", ".join(missing)
-			+ ". Select NarrativePanel and assign them in the Inspector."
+			+ ". Select NarrativeScene and assign them in the Inspector."
 		)
 		return
 
 	if not _choice_scene_is_usable():
 		_report_error(
 			"[Narrative] Choice Button Scene must be ChoiceButton.tscn — a Button "
-			+ "with ChoiceButton.gd attached. Fix it on NarrativePanel in the Inspector."
+			+ "with ChoiceButton.gd attached. Fix it on NarrativeScene in the Inspector."
 		)
 		return
 
-	_setup_ok = true
 	_auto_timer = Timer.new()
 	_auto_timer.one_shot = true
 	_auto_timer.timeout.connect(_advance)
 	add_child(_auto_timer)
 	auto_play_toggle.toggled.connect(_on_auto_play_toggled)
 
+	# The whole scene tree is still being assembled during _ready(). One
+	# deferred step later every node is in place, so look for the director
+	# then — no matter which node Godot happened to build first.
+	_connect_director.call_deferred()
+
+# Finds the one NarrativeDirector in the running game and subscribes to it.
+func _connect_director() -> void:
+	director = get_tree().get_first_node_in_group(NarrativeDirector.DIRECTORS_GROUP) as NarrativeDirector
+	if director == null:
+		_report_error(
+			"[Narrative] NarrativeScene found no NarrativeDirector in the scene tree — "
+			+ "Main.tscn needs one under Managers."
+		)
+		return
+
 	director.story_started.connect(_on_story_started)
 	director.beat_ready.connect(_on_beat_ready)
 	director.choices_ready.connect(_on_choices_ready)
 	director.story_ended.connect(_on_story_ended)
 	director.narrative_failed.connect(_on_narrative_failed)
+	_setup_ok = true
 
 	if director.has_failed:
 		# The director already failed before we connected; show the truth now.
 		_on_narrative_failed(director.last_error)
 	else:
-		# The director finishes loading one deferred step after the scene is
-		# built, so our start request queues right behind it.
-		director.start_story.call_deferred()
+		# If the director hasn't finished loading yet, it remembers this
+		# request and starts as soon as it has.
+		director.start_story()
 
-# Click or tap anywhere on the panel to advance. Buttons and scrollbars
+# Click or tap anywhere on the scene to advance. Buttons and scrollbars
 # consume their own clicks first, so they never double as an advance.
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed \
@@ -116,21 +128,19 @@ func _advance() -> void:
 		director.continue_story()
 
 func _on_story_started() -> void:
-	# A fresh story must not inherit the previous story's ticking clock —
-	# or its error banner.
+	# A fresh story must not inherit the previous story's ticking clock.
 	_pause_auto_play()
 	story_text.text = ""
-	_error_banner.visible = false
 	_clear_choices()
 
 func _on_beat_ready(text: String, _tags: Array) -> void:
 	match presentation_mode:
-		PresentationMode.BUILD_DOWN:
-			story_text.text += text
-			_scroll_to_bottom()
 		PresentationMode.ONE_BEAT_AT_A_TIME:
 			story_text.text = text
 			story_scroll.scroll_vertical = 0
+		PresentationMode.BUILD_DOWN:
+			story_text.text += text
+			_scroll_to_bottom()
 
 	# Each beat rewinds the auto-play clock to its own reading time — a manual
 	# advance therefore also gives the next beat its full time up.
@@ -157,16 +167,12 @@ func _on_story_ended() -> void:
 	_pause_auto_play()
 
 func _on_narrative_failed(message: String) -> void:
-	# Keep the last good text visible, add the error beneath it, and light up
-	# the red banner — the problem must be on screen, not just in the Output
-	# panel (which browser players can never see).
+	# Keep the last good text visible and add the error beneath it. (The red
+	# ErrorBanner in Main's UI layer lights up on its own — it listens to
+	# SignalBus, which the director already posted to.)
 	_pause_auto_play()
 	_clear_choices()
-	if story_text.text != "" and not story_text.text.ends_with("\n"):
-		story_text.text += "\n"
-	story_text.text += message + "\n"
-	_show_error_banner(message)
-	_scroll_to_bottom()
+	_append_error_text(message)
 
 # The player flipped the Auto switch. On: time the beat that is up right now.
 # Off: stop the clock (the story simply waits for clicks again).
@@ -187,27 +193,20 @@ func _pause_auto_play() -> void:
 func _auto_play_delay_for(text: String) -> float:
 	return maxf(auto_play_min_seconds, text.length() * auto_play_seconds_per_character)
 
-# Builds the hidden red strip that failures light up. Anchored along the
-# bottom edge; long messages wrap and grow upward.
-func _make_error_banner() -> Label:
-	var banner := Label.new()
-	banner.name = "ErrorBanner"
-	banner.visible = false
-	banner.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	banner.add_theme_color_override("font_color", Color.RED)
-	banner.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	banner.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	return banner
-
-func _show_error_banner(message: String) -> void:
-	_error_banner.text = message
-	_error_banner.visible = true
-
-# For the panel's own setup errors: one console error, and the same message
-# on screen.
+# For the scene's own setup errors: one console error, the same message on
+# screen, and a post on the bulletin board so the ErrorBanner lights up.
 func _report_error(message: String) -> void:
 	push_error(message)
-	_show_error_banner(message)
+	_append_error_text(message)
+	SignalBus.narrative_failed.emit(message)
+
+func _append_error_text(message: String) -> void:
+	if story_text == null:
+		return
+	if story_text.text != "" and not story_text.text.ends_with("\n"):
+		story_text.text += "\n"
+	story_text.text += message + "\n"
+	_scroll_to_bottom()
 
 func _clear_choices() -> void:
 	# Take each button out of the container right away — if the story jumps
@@ -230,14 +229,15 @@ func _choice_scene_is_usable() -> bool:
 	return usable
 
 func _scroll_to_bottom() -> void:
+	if story_scroll == null:
+		return
 	# Wait one frame so the new text has been laid out, then jump down.
 	await get_tree().process_frame
-	story_scroll.scroll_vertical = int(story_scroll.get_v_scroll_bar().max_value)
+	if story_scroll != null:
+		story_scroll.scroll_vertical = int(story_scroll.get_v_scroll_bar().max_value)
 
 func _missing_references() -> Array:
 	var missing: Array = []
-	if director == null:
-		missing.append("Director")
 	if story_text == null:
 		missing.append("Story Text")
 	if story_scroll == null:

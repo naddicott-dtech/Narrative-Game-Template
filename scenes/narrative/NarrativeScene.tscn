@@ -1,0 +1,169 @@
+[gd_scene load_steps=9 format=3 uid="uid://bu4ru6bejvulx"]
+
+[ext_resource type="Script" uid="uid://bv0rwm6cmxmvt" path="res://scenes/narrative/NarrativeScene.gd" id="1_mesrm"]
+[ext_resource type="PackedScene" uid="uid://bjygvkrqu60at" path="res://scenes/ui/ChoiceButton.tscn" id="2_kackd"]
+[ext_resource type="Script" uid="uid://de4oppx26dkju" path="res://scenes/narrative/NarrativeStage.gd" id="3_5k7s6"]
+[ext_resource type="Texture2D" uid="uid://c25ch0jegfa8h" path="res://assets/placeholders/background.png" id="4_6d6em"]
+[ext_resource type="Script" uid="uid://hx41qu3yv3i4" path="res://scenes/narrative/SpeakerLink.gd" id="5_ph7vt"]
+[ext_resource type="Texture2D" uid="uid://dy6fxupkd3flv" path="res://assets/placeholders/portrait_1.png" id="6_ehrbh"]
+[ext_resource type="Texture2D" uid="uid://clehvb43o4kdm" path="res://assets/placeholders/portrait_2.png" id="7_csi2x"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_x7kpj"]
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+bg_color = Color(0, 0, 0, 0.7)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="NarrativeScene" type="Control" node_paths=PackedStringArray("story_text", "story_scroll", "choices_container", "auto_play_toggle")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mesrm")
+story_text = NodePath("DialogueBox/Rows/StoryScroll/StoryText")
+story_scroll = NodePath("DialogueBox/Rows/StoryScroll")
+choices_container = NodePath("ChoicesScroll/ChoicesContainer")
+choice_button_scene = ExtResource("2_kackd")
+auto_play_toggle = NodePath("AutoPlayToggle")
+
+[node name="Stage" type="Control" parent="." node_paths=PackedStringArray("background", "left_portrait", "right_portrait", "speaker_label")]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_5k7s6")
+background = NodePath("Background")
+left_portrait = NodePath("LeftPortrait")
+right_portrait = NodePath("RightPortrait")
+speaker_label = NodePath("../DialogueBox/Rows/SpeakerLabel")
+
+[node name="Background" type="TextureRect" parent="Stage"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_6d6em")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="LeftPortrait" type="TextureRect" parent="Stage"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = -704.0
+offset_right = 340.0
+offset_bottom = -254.0
+grow_vertical = 0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RightPortrait" type="TextureRect" parent="Stage"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -340.0
+offset_top = -704.0
+offset_right = -40.0
+offset_bottom = -254.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Links" type="Node" parent="Stage"]
+
+[node name="MayaLink" type="Node" parent="Stage/Links"]
+script = ExtResource("5_ph7vt")
+cue_name = "maya"
+display_name = "Maya"
+portrait = ExtResource("6_ehrbh")
+
+[node name="GuideLink" type="Node" parent="Stage/Links"]
+script = ExtResource("5_ph7vt")
+cue_name = "guide"
+display_name = "The Guide"
+portrait = ExtResource("7_csi2x")
+side = 1
+
+[node name="DialogueBox" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -254.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_x7kpj")
+
+[node name="Rows" type="VBoxContainer" parent="DialogueBox"]
+layout_mode = 2
+
+[node name="SpeakerLabel" type="Label" parent="DialogueBox/Rows"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+
+[node name="StoryScroll" type="ScrollContainer" parent="DialogueBox/Rows"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="StoryText" type="RichTextLabel" parent="DialogueBox/Rows/StoryScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 1
+theme_override_font_sizes/normal_font_size = 20
+fit_content = true
+
+[node name="ChoicesScroll" type="ScrollContainer" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.25
+anchor_top = 0.12
+anchor_right = 0.75
+anchor_bottom = 0.62
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 0
+
+[node name="ChoicesContainer" type="VBoxContainer" parent="ChoicesScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="AutoPlayToggle" type="CheckButton" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -110.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = 44.0
+grow_horizontal = 0
+text = "Auto"

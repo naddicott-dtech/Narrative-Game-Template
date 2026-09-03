@@ -1,8 +1,11 @@
 # NarrativeDirector.gd
 #
 # The conductor between your compiled Inky story (a .json file) and the game.
-# It loads the story, hands each line (a "beat") to the UI one advance at a
-# time, and passes the player's choices back to Ink.
+# It loads the story, hands each line (a "beat") to the story view one
+# advance at a time, and passes the player's choices back to Ink. Story cues
+# ("# @speaker: maya") go to the NarrativeStage, which the director finds by
+# its group — so the stage can live inside a scene that gets swapped in and
+# out (cut scenes, other game modes) while the story itself lives on here.
 #
 # If anything goes wrong — a missing file, a broken export, a bad choice —
 # it reports ONE clear [Narrative] error, tells the UI, and stops asking Ink
@@ -12,10 +15,6 @@ extends Node
 
 ## The compiled story exported from Inky. Set this in the Inspector.
 @export_file("*.json") var story_file: String = ""
-
-## Where story cues ("# @speaker: maya") are performed. A story with no cues
-## never needs this; a story WITH cues stops loudly if it is missing.
-@export var cue_stage: NarrativeStage
 
 ## A fresh story just began (also fires on restart). The UI clears itself.
 signal story_started
@@ -122,7 +121,12 @@ func start_story() -> void:
 	if _presentation_started:
 		return
 	_presentation_started = true
+	# A fresh story inherits nothing from the last one: clear the stage first.
+	var stage := _find_stage()
+	if stage != null:
+		stage.reset()
 	story_started.emit()
+	SignalBus.story_started.emit()   # the bulletin board copy (ErrorBanner listens)
 	continue_story()
 
 func continue_story() -> void:
@@ -143,14 +147,17 @@ func continue_story() -> void:
 		_fail(parsed["error"])
 		return
 	var cues: Array = parsed["cues"]
-	if not cues.is_empty() and cue_stage == null:
-		_fail(
-			"[Narrative] Story uses cues but NarrativeDirector has no Cue Stage "
-			+ "assigned. Select NarrativeDirector and set 'Cue Stage' in the Inspector."
-		)
-		return
+	var stage: NarrativeStage = null
+	if not cues.is_empty():
+		stage = _find_stage()
+		if stage == null:
+			_fail(
+				"[Narrative] Story uses cues but there is no NarrativeStage in the scene "
+				+ "tree — the NarrativeScene (which contains the Stage) must be loaded to run cues."
+			)
+			return
 	for cue in cues:
-		var cue_error: String = cue_stage.execute_cue(
+		var cue_error: String = stage.execute_cue(
 			cue["command"], cue["value"], text.strip_edges()
 		)
 		if cue_error != "":
@@ -211,3 +218,9 @@ func _enter_failed_state(message: String) -> void:
 	has_failed = true
 	last_error = message
 	narrative_failed.emit(message)
+	SignalBus.narrative_failed.emit(message)   # the bulletin board copy (ErrorBanner listens)
+
+# The stage on duty: whichever NarrativeStage is in the running scene tree.
+# Null when the story view is swapped out (or was never loaded).
+func _find_stage() -> NarrativeStage:
+	return get_tree().get_first_node_in_group(NarrativeStage.STAGE_GROUP) as NarrativeStage
