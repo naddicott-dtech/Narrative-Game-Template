@@ -208,6 +208,31 @@ link is missing stops the game with an error that lists the known names.
   played by the `AudioManager` autoload (`autoload/AudioManager.gd`:
   `play_music`, `stop_music`, `play_sfx`, `set_master_volume`).
 
+## Showing an Ink variable on screen (VariableDisplay)
+
+If the story has `VAR fuel = 100`, the game can show it live — no Ink change:
+
+1. Open `scenes/Main.tscn`, select `UI` in the Scene panel.
+2. Right-click → **Add Child Node** → type `VariableDisplay` in the search
+   box at the top of that dialog → **Create**.
+3. In the Inspector set **Variable Name** to `fuel` (spelled exactly as in
+   Inky). Optional: **Label Text** (what it's called on screen; empty = the
+   variable name, so `elapsed_hours` shows as "Elapsed Hours"). **Display
+   As** is `Text` by default — the name and the value side by side, like
+   "Fuel  100". Pick `Bar` (with **Max Value**) for a gauge: the value fills
+   the bar as a fraction of Max Value, and the number is written on the bar.
+4. Drag the node where you want it in the 2D view (the big middle area of
+   the editor; the node is a free-floating box). Press Play.
+
+It is read-only — the story owns the value and the display follows every
+change. **To change a variable, do it in Ink**, not with a Godot button —
+for example a choice `* [Refuel] ~ fuel = 100` — and the display updates
+by itself. A misspelled name stops the game with an error that lists the
+variables the story actually has. Add one node per variable. (Script:
+`scenes/ui/VariableDisplay.gd`. The same trick applies to the link nodes:
+`SpeakerLink`, `BackgroundLink`, `MusicLink`, `SfxLink` all appear in Add
+Child Node — duplicating an existing one is just faster.)
+
 ## Common `[Narrative]` errors → likely fixes
 
 | Error starts with | Meaning / fix |
@@ -229,6 +254,7 @@ link is missing stops the game with an error that lists the known names.
 | `NarrativeStage is missing its ... reference` | Select `Stage` and assign the reference it names (Background, Left Portrait, Right Portrait, or Speaker Label). |
 | `NarrativeScene found no NarrativeDirector` | `Main.tscn` has no `NarrativeDirector` under `Managers` — put it back (undo, or add a Node named NarrativeDirector with `scenes/managers/NarrativeDirector.gd` attached). |
 | `NarrativeScene is missing Inspector references` | Select `NarrativeScene` and assign the references it lists. |
+| `VariableDisplay "..." watches "..." but the story has no such variable` | The Variable Name on that node doesn't match a `VAR` in the story; the message lists the real names. Fix the spelling (or re-export the story if you just added the VAR). |
 | `Choice N does not exist` | Code called `choose()` with a bad number — choices are numbered from 0. |
 
 ## Little tweaks (Inspector first)

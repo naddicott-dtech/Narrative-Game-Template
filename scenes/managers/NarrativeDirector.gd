@@ -108,7 +108,31 @@ func load_story(json_path: String) -> bool:
 	_presentation_started = false
 
 	_story = _loader.load_from_path(json_path, _runtime)
-	return _story != null
+	if _story == null:
+		return false
+	_attach_variable_displays()
+	return not has_failed
+
+# Every VariableDisplay in the scene gets the story's current value and is
+# subscribed to changes (Ink's variable observer). A display naming a
+# variable the story doesn't have is a loud failure — the message lists the
+# variables that DO exist, so the typo is easy to spot.
+func _attach_variable_displays() -> void:
+	if not is_inside_tree():
+		return
+	var variables: InkVariablesState = _story.variables_state
+	for display in get_tree().get_nodes_in_group(VariableDisplay.GROUP):
+		var variable_name: String = display.variable_name.strip_edges()
+		if not variables.global_variable_exists_with_name(variable_name):
+			var known: Array = variables._global_variables.keys()
+			known.sort()
+			_fail(
+				'[Narrative] VariableDisplay "%s" watches "%s" but the story has no such variable — known variables: %s'
+				% [display.name, variable_name, ", ".join(known)]
+			)
+			return
+		display.show_value(variables.get_variable(variable_name))
+		_story.observe_variable(variable_name, display, "on_variable_changed")
 
 func start_story() -> void:
 	if has_failed:
