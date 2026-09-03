@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://bu4ru6bejvulx"]
+[gd_scene load_steps=16 format=3 uid="uid://bu4ru6bejvulx"]
 
 [ext_resource type="Script" uid="uid://bv0rwm6cmxmvt" path="res://scenes/narrative/NarrativeScene.gd" id="1_mesrm"]
 [ext_resource type="PackedScene" uid="uid://bjygvkrqu60at" path="res://scenes/ui/ChoiceButton.tscn" id="2_kackd"]
@@ -10,6 +10,10 @@
 [ext_resource type="Script" uid="uid://bop3n0at6eph3" path="res://scenes/narrative/BackgroundLink.gd" id="8_6d6em"]
 [ext_resource type="Texture2D" uid="uid://dh8rfff5bxheg" path="res://assets/placeholders/background_1.png" id="9_ph7vt"]
 [ext_resource type="Texture2D" uid="uid://86ffjhbntl2g" path="res://assets/placeholders/background_2.png" id="10_ehrbh"]
+[ext_resource type="Script" uid="uid://cq2tswllmxvet" path="res://scenes/narrative/MusicLink.gd" id="11_x7kpj"]
+[ext_resource type="AudioStream" uid="uid://dx44byr7b1c65" path="res://assets/placeholders/music_1.wav" id="12_h0bbo"]
+[ext_resource type="Script" uid="uid://cjcqb16e01xyh" path="res://scenes/narrative/SfxLink.gd" id="13_3oaj2"]
+[ext_resource type="AudioStream" uid="uid://ceob5mqbyvjvu" path="res://assets/placeholders/sfx_1.wav" id="14_tjruv"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_x7kpj"]
 content_margin_left = 16.0
@@ -117,6 +121,16 @@ image = ExtResource("9_ph7vt")
 script = ExtResource("8_6d6em")
 cue_name = "background_2"
 image = ExtResource("10_ehrbh")
+
+[node name="Music1" type="Node" parent="Stage/Links"]
+script = ExtResource("11_x7kpj")
+cue_name = "music_1"
+music = ExtResource("12_h0bbo")
+
+[node name="Sfx1" type="Node" parent="Stage/Links"]
+script = ExtResource("13_3oaj2")
+cue_name = "sfx_1"
+sound = ExtResource("14_tjruv")
 
 [node name="DialogueBox" type="PanelContainer" parent="."]
 layout_mode = 1

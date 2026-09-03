@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://c8vsrpns1aeg7"]
+[gd_scene load_steps=8 format=3 uid="uid://c8vsrpns1aeg7"]
 
 [ext_resource type="PackedScene" uid="uid://bjl08sv1ddywf" path="res://scenes/managers/TimeManager.tscn" id="1_rvslj"]
 [ext_resource type="Script" uid="uid://cqwlteyggf7h0" path="res://scenes/Main.gd" id="1_vcsgt"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://dc6bcnu6gnbqb" path="res://scenes/managers/NarrativeDirector.gd" id="3_vcsgt"]
 [ext_resource type="PackedScene" uid="uid://bu4ru6bejvulx" path="res://scenes/narrative/NarrativeScene.tscn" id="4_c01mt"]
 [ext_resource type="Script" uid="uid://bbw54cdh50dfs" path="res://scenes/ui/ErrorBanner.gd" id="6_nxtc6"]
+[ext_resource type="Script" uid="uid://cso5a6vqq1162" path="res://scenes/ui/SoundToggle.gd" id="7_nxtc6"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_vcsgt")
@@ -41,3 +42,15 @@ offset_top = -40.0
 grow_horizontal = 2
 grow_vertical = 0
 script = ExtResource("6_nxtc6")
+
+[node name="SoundToggle" type="CheckButton" parent="UI"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -232.0
+offset_top = 12.0
+offset_right = -122.0
+offset_bottom = 44.0
+grow_horizontal = 0
+text = "Sound"
+script = ExtResource("7_nxtc6")

@@ -94,12 +94,13 @@ tweaks, not build features for them**. Prefer short, specific answers.
   listen. Story-related posts: `story_started`, `narrative_failed(message)`,
   `speaker_changed(name)`.
 
-## Story cues: @speaker, @exit, @background
+## Story cues: @speaker, @exit, @background, @music, @sfx
 
 In Inky, end a line with a cue tag:
 
 ```ink
-The truck stop glows at dusk. # @background: truck_stop
+The truck stop glows at dusk. # @background: truck_stop # @music: road_theme
+A horn blares. # @sfx: horn
 Maya waves hello. # @speaker: maya
 Maya: Goodbye, driver. # @speaker: maya
 The door swings shut behind her. # @exit: maya
@@ -119,6 +120,9 @@ the new picture shows together with the line that carries the cue.
 | `@exit: all` | everyone leaves, name cleared | nothing |
 | `@background: name` | swaps the full-screen picture | a BackgroundLink with that Cue Name |
 | `@background: none` | back to the picture the scene started with | nothing |
+| `@music: name` | starts that track; it keeps playing through the following lines until `@music: off` or a different `@music` (cueing the same track again does nothing) | a MusicLink with that Cue Name |
+| `@music: off` | stops the music | nothing |
+| `@sfx: name` | plays that sound once (several can overlap) | an SfxLink with that Cue Name |
 
 A beat may carry several cues (`# @background: bar # @speaker: maya`), one
 command each; they run left to right, before the line shows. A cue whose
@@ -158,6 +162,23 @@ link is missing stops the game with an error that lists the known names.
 - **Someone leaves:** `# @exit: maya` clears Maya's portrait (and her name if
   she was the one talking). `# @exit: all` empties the stage. Characters also
   leave when a new story starts.
+- **Add music or a sound:** the template ships `Music1` (Cue Name `music_1`)
+  and `Sfx1` (`sfx_1`) under `Stage/Links`, pointing at dull placeholder
+  tones. Duplicate one, rename it, set its Cue Name and **Music** (or
+  **Sound**) field to an audio file you dragged into `assets/` (`.ogg`,
+  `.mp3` or `.wav`). To make a track loop: click the file in the FileSystem
+  dock, then open the **Import** tab (it sits next to the Scene panel, top
+  left) → turn on **Loop** → click **Reimport**. (`.ogg` files loop by
+  default.) Music stops when a new story starts.
+- **Sound is OFF until the player turns it on.** The **Sound** switch (top
+  right, next to Auto, node `Main/UI/SoundToggle`) starts off because web
+  pages must not play sound uninvited — and browsers won't play any audio
+  until the player has clicked something anyway. A `@music` cue on the very
+  first line still works: the music is playing silently and is heard the
+  moment the switch goes on. To start with sound on: select `SoundToggle` →
+  Inspector → Button Pressed → On. Harmless on the web — the switch shows
+  On, and the browser still waits for the player's first click before
+  letting any sound out.
 - A cue value with no matching SpeakerLink stops the game with an error
   that lists the known names — check spelling on both sides.
 - Portraits start as labeled placeholder art in `assets/placeholders/`
@@ -179,10 +200,13 @@ link is missing stops the game with an error that lists the known names.
 
 - Cue rules: one `@command: value` per tag (a beat may carry several tags),
   lowercase command names, and the same command can't repeat on one beat.
-  Any other `@` command (like `@music`) is not run by this version yet and
+  Any other `@` command (say, `@camera`) is not run by this version and
   stops the game loudly.
 - *(For the assistant, code-level:)* successful cues also post
-  `SignalBus.background_changed(name)` and `SignalBus.character_exited(name)`.
+  `SignalBus.background_changed(name)`, `SignalBus.character_exited(name)`,
+  `SignalBus.music_changed(name)` and `SignalBus.sfx_played(name)`. Audio is
+  played by the `AudioManager` autoload (`autoload/AudioManager.gd`:
+  `play_music`, `stop_music`, `play_sfx`, `set_master_volume`).
 
 ## Common `[Narrative]` errors → likely fixes
 
@@ -193,13 +217,14 @@ link is missing stops the game with an error that lists the known names.
 | `Invalid JSON` / `missing 'inkVersion'` | The file isn't a compiled Ink export. In Inky use **File → Export to JSON** (not "save .ink"). |
 | `Ink version N is newer/older` | Re-export from a current Inky; this template plays Ink v18–v21. |
 | `Ink runtime exception` | The compiled file is damaged or hand-edited. Re-export from Inky; don't edit the JSON by hand. |
-| `Unsupported reserved cue "@..."` | The story uses an `@` command this version doesn't run (today: `@speaker`, `@exit`, `@background`). Remove the tag in Inky, or use a plain tag (no `@`). |
+| `Unsupported reserved cue "@..."` | The story uses an `@` command this version doesn't run (today: `@speaker`, `@exit`, `@background`, `@music`, `@sfx`). Remove the tag in Inky, or use a plain tag (no `@`). |
 | `Malformed cue "..."` | An `@` tag isn't shaped like `# @command: value` — a missing colon, an empty value, or a capital letter in the *command* part (`@Speaker`). (The *value* may have capitals — `@speaker: Dispatcher` — as long as the Cue Name matches exactly; if not, you get "No SpeakerLink named" instead.) |
 | `Two "@..." cues on one beat` | The same command appears twice on one story line — keep one. |
 | `Story uses cues but there is no NarrativeStage in the scene tree` | The `Stage` node (inside `NarrativeScene`) is missing from the running scene — usually `NarrativeScene` was deleted from `Main/WorldRoot` or the Stage was removed. Put it back (undo, or re-instance `scenes/narrative/NarrativeScene.tscn` under `WorldRoot`). |
 | `No SpeakerLink named "..."` / `No BackgroundLink named "..."` | The cue value doesn't match any link's Cue Name — the message lists the names that do exist. Fix the spelling in Inky (then re-export the JSON) or in the link's Cue Name, and press Play again. |
-| `BackgroundLink "..." has no Image` | Select that link under `Stage/Links` and set its Image. |
-| `Two SpeakerLinks/BackgroundLinks share the cue name` | Two links have the same Cue Name — rename one. |
+| `BackgroundLink "..." has no Image` / `MusicLink "..." has no Music` / `SfxLink "..." has no Sound` | Select that link under `Stage/Links` and set the named field. |
+| `No MusicLink named "..."` / `No SfxLink named "..."` | Same as the SpeakerLink case: the cue value matches no link's Cue Name; the message lists the ones that exist. |
+| `Two SpeakerLinks/BackgroundLinks/MusicLinks/SfxLinks share the cue name` | Two links of that type have the same Cue Name — rename one. |
 | `SpeakerLink "..." has no Display Name` | Select that link under `Stage/Links` and fill in Display Name. |
 | `NarrativeStage is missing its ... reference` | Select `Stage` and assign the reference it names (Background, Left Portrait, Right Portrait, or Speaker Label). |
 | `NarrativeScene found no NarrativeDirector` | `Main.tscn` has no `NarrativeDirector` under `Managers` — put it back (undo, or add a Node named NarrativeDirector with `scenes/managers/NarrativeDirector.gd` attached). |
@@ -278,6 +303,7 @@ to stop, then resumes when the player returns to the tab. Normal, not a bug.
 
 | Works in the editor, broken in the browser | Likely fix |
 |---|---|
+| No sound in the browser | Flip the **Sound** switch (top right). Browsers play nothing until the player clicks something, and the game starts muted on purpose. |
 | Red `Cannot open Ink JSON` only in the browser | The story file was added after the last export, or sits outside the project folder — check its path, then re-export. |
 | Blank/black page, nothing loads | It was opened via `file://`, or files are missing — serve over http and upload the **whole** export folder. |
 | Story plays but recent changes are missing | Stale export or browser cache — re-export after every change, then hard-reload (Cmd+Shift+R). |
@@ -288,8 +314,9 @@ to stop, then resumes when the player returns to the tab. Normal, not a bug.
   project's `stories/` folder.
 - Plain tags like `# author: Sam` are fine and ignored by the game.
 - Tags starting with `@` are game commands: `@speaker`, `@exit`,
-  `@background` work today (see the cues section above); any other `@`
-  command stops the game with an error.
+  `@background`, `@music`, `@sfx` work today (see the cues section above);
+  any other `@` command stops the game with an error. Tags never break Inky
+  — it shows them in gray next to the line and ignores them when playing.
 - No cue needed for a plain script style — writing "(Maya) Hello." straight
   in the story text is always fine.
 

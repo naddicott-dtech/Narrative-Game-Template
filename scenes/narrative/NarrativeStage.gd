@@ -13,10 +13,15 @@
 #   @exit: <name>         that character leaves the screen (all = everyone)
 #   @background: <name>   show that BackgroundLink's picture
 #   @background: none     back to the picture the scene started with
+#   @music: <name>        play that MusicLink's track (same track again = keeps playing)
+#   @music: off           stop the music
+#   @sfx: <name>          play that SfxLink's sound once
 #
-# Characters are SpeakerLink nodes and pictures are BackgroundLink nodes,
-# both under the Links child — duplicate one per character / place and fill
-# its Inspector fields. After a cue succeeds, the stage posts an announcement
+# Characters are SpeakerLink nodes, pictures are BackgroundLink nodes, and
+# audio is MusicLink / SfxLink nodes — all under the Links child. Duplicate
+# one per character / place / sound and fill its Inspector fields. Audio is
+# played by the game's AudioManager (autoload); this stage just hands it the
+# right file. After a cue succeeds, the stage posts an announcement
 # on SignalBus (the bulletin board), so any script can react:
 #     SignalBus.speaker_changed.connect(my_function)
 #
@@ -42,6 +47,9 @@ const DIM_COLOR := Color(0.55, 0.55, 0.55, 1.0)
 # The background the scene was designed with, restored by reset() and by
 # "@background: none".
 var _default_background: Texture2D = null
+# The cue name of the track playing now ("" = none) — so cueing the same
+# track twice does not restart it.
+var _current_music := ""
 
 func _ready() -> void:
 	add_to_group(STAGE_GROUP)
@@ -59,6 +67,8 @@ func reset() -> void:
 			slot.modulate = Color.WHITE
 	if background != null:
 		background.texture = _default_background
+	AudioManager.stop_music()
+	_current_music = ""
 
 # Performs one cue. Returns "" on success, or the full error message —
 # the director prints it and halts, so this script never push_errors itself.
@@ -71,6 +81,10 @@ func execute_cue(command: String, value: String, beat_text: String) -> String:
 			return _do_exit(value)
 		"background":
 			return _do_background(value)
+		"music":
+			return _do_music(value)
+		"sfx":
+			return _do_sfx(value)
 		_:
 			# A specialist adds a command here: one match branch + one
 			# _do_...() function + a link type if it needs assets.
@@ -177,6 +191,51 @@ func _do_background(value: String) -> String:
 	if background.texture != link.image:   # same picture again = nothing to do
 		background.texture = link.image
 	SignalBus.background_changed.emit(value)
+	return ""
+
+# ---- @music ----
+
+func _do_music(value: String) -> String:
+	# The reserved value "off" means: silence.
+	if value == "off":
+		AudioManager.stop_music()
+		_current_music = ""
+		SignalBus.music_changed.emit("off")
+		return ""
+
+	var found := _find_link(MusicLink, "MusicLink", value)
+	if found["error"] != "":
+		return found["error"]
+	var link: MusicLink = found["link"]
+
+	if link.music == null:
+		return (
+			'[Narrative] MusicLink "%s" has no Music — select it and set the field in the Inspector.'
+			% value
+		)
+
+	if _current_music != value:   # the same track again just keeps playing
+		AudioManager.play_music(link.music)
+		_current_music = value
+	SignalBus.music_changed.emit(value)
+	return ""
+
+# ---- @sfx ----
+
+func _do_sfx(value: String) -> String:
+	var found := _find_link(SfxLink, "SfxLink", value)
+	if found["error"] != "":
+		return found["error"]
+	var link: SfxLink = found["link"]
+
+	if link.sound == null:
+		return (
+			'[Narrative] SfxLink "%s" has no Sound — select it and set the field in the Inspector.'
+			% value
+		)
+
+	AudioManager.play_sfx(link.sound)
+	SignalBus.sfx_played.emit(value)
 	return ""
 
 # ---- helpers ----

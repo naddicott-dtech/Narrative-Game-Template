@@ -48,3 +48,9 @@ signal background_changed(background_name)  # posted after a "@background:" cue
 @warning_ignore("UNUSED_SIGNAL")
 signal character_exited(speaker_name)  # posted after an "@exit:" cue succeeds
 									   # ("all" = the whole cast left)
+
+@warning_ignore("UNUSED_SIGNAL")
+signal music_changed(music_name)   # posted after a "@music:" cue succeeds ("off" = stopped)
+
+@warning_ignore("UNUSED_SIGNAL")
+signal sfx_played(sfx_name)        # posted after a "@sfx:" cue plays a sound
