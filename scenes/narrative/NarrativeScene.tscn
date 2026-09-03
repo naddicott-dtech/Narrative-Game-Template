@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://bu4ru6bejvulx"]
+[gd_scene load_steps=18 format=3 uid="uid://bu4ru6bejvulx"]
 
 [ext_resource type="Script" uid="uid://bv0rwm6cmxmvt" path="res://scenes/narrative/NarrativeScene.gd" id="1_mesrm"]
 [ext_resource type="PackedScene" uid="uid://bjygvkrqu60at" path="res://scenes/ui/ChoiceButton.tscn" id="2_kackd"]
@@ -14,6 +14,8 @@
 [ext_resource type="AudioStream" uid="uid://dx44byr7b1c65" path="res://assets/placeholders/music_1.wav" id="12_h0bbo"]
 [ext_resource type="Script" uid="uid://cjcqb16e01xyh" path="res://scenes/narrative/SfxLink.gd" id="13_3oaj2"]
 [ext_resource type="AudioStream" uid="uid://ceob5mqbyvjvu" path="res://assets/placeholders/sfx_1.wav" id="14_tjruv"]
+[ext_resource type="Script" uid="uid://dsijoqw0fxwnf" path="res://scenes/narrative/SceneLink.gd" id="15_3oaj2"]
+[ext_resource type="PackedScene" uid="uid://oud7pjk1fkkv" path="res://scenes/content/CutScene.tscn" id="16_tjruv"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_x7kpj"]
 content_margin_left = 16.0
@@ -131,6 +133,12 @@ music = ExtResource("12_h0bbo")
 script = ExtResource("13_3oaj2")
 cue_name = "sfx_1"
 sound = ExtResource("14_tjruv")
+
+[node name="Scene1" type="Node" parent="Stage/Links"]
+script = ExtResource("15_3oaj2")
+cue_name = "scene_1"
+scene = ExtResource("16_tjruv")
+transition = 1
 
 [node name="DialogueBox" type="PanelContainer" parent="."]
 layout_mode = 1

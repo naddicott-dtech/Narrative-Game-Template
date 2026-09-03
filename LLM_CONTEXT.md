@@ -94,7 +94,7 @@ tweaks, not build features for them**. Prefer short, specific answers.
   listen. Story-related posts: `story_started`, `narrative_failed(message)`,
   `speaker_changed(name)`.
 
-## Story cues: @speaker, @exit, @background, @music, @sfx
+## Story cues: @speaker, @exit, @background, @music, @sfx, @scene, @transition
 
 In Inky, end a line with a cue tag:
 
@@ -123,6 +123,8 @@ the new picture shows together with the line that carries the cue.
 | `@music: name` | starts that track; it keeps playing through the following lines until `@music: off` or a different `@music` (cueing the same track again does nothing) | a MusicLink with that Cue Name |
 | `@music: off` | stops the music | nothing |
 | `@sfx: name` | plays that sound once (several can overlap) | an SfxLink with that Cue Name |
+| `@scene: name` | after this line is read, cuts away to that scene (a picture, an animation, a mini-game); the story continues when the scene says it's done | a SceneLink with that Cue Name |
+| `@transition: fade` | this line appears from black (`none` = instant) | nothing |
 
 A beat may carry several cues (`# @background: bar # @speaker: maya`), one
 command each; they run left to right, before the line shows. A cue whose
@@ -162,6 +164,21 @@ link is missing stops the game with an error that lists the known names.
 - **Someone leaves:** `# @exit: maya` clears Maya's portrait (and her name if
   she was the one talking). `# @exit: all` empties the stage. Characters also
   leave when a new story starts.
+- **Cut scenes and other game modes:** `# @scene: chase` on a line means:
+  show that line, and on the player's *next* click replace the whole story
+  view with the scene linked as `chase` — the Sound switch, the ErrorBanner
+  and any VariableDisplays stay. When that scene is finished, the story view
+  comes back exactly as it was (same background, cast, music) and the next
+  line plays. The template ships `Scene1` (Cue Name `scene_1`) pointing at
+  `scenes/content/CutScene.tscn`: a full-screen picture that finishes on a
+  click. **Make a cut scene:** duplicate `CutScene.tscn` in the FileSystem
+  dock (right-click → Duplicate), open the copy, set its **Picture**;
+  duplicate `Scene1` under `Stage/Links`, set Cue Name and drag the new
+  `.tscn` onto its **Scene** field; **Transition** → `Fade` for a fade from
+  black. **Make ANY scene a story detour** (a mini-game, a level): the one
+  rule is that when it is done, its script posts
+  `SignalBus.content_finished.emit()` — that single line is the whole
+  contract (see `scenes/content/CutScene.gd` for the smallest example).
 - **Add music or a sound:** the template ships `Music1` (Cue Name `music_1`)
   and `Sfx1` (`sfx_1`) under `Stage/Links`, pointing at dull placeholder
   tones. Duplicate one, rename it, set its Cue Name and **Music** (or
@@ -204,7 +221,12 @@ link is missing stops the game with an error that lists the known names.
   stops the game loudly.
 - *(For the assistant, code-level:)* successful cues also post
   `SignalBus.background_changed(name)`, `SignalBus.character_exited(name)`,
-  `SignalBus.music_changed(name)` and `SignalBus.sfx_played(name)`. Audio is
+  `SignalBus.music_changed(name)`, `SignalBus.sfx_played(name)`,
+  `SignalBus.content_changed(name)` (a scene is up) and
+  `SignalBus.story_view_returned`. `ContentManager`
+  (`scenes/managers/ContentManager.gd`, `Main/Managers/ContentManager`) does
+  the actual swap: `swap_to(scene, name)` / `return_to_story()` return "" or
+  an error. `Main/UI/Fade` (`scenes/ui/Fade.gd`) has a **Seconds** knob. Audio is
   played by the `AudioManager` autoload (`autoload/AudioManager.gd`:
   `play_music`, `stop_music`, `play_sfx`, `set_master_volume`).
 
@@ -242,12 +264,16 @@ Child Node — duplicating an existing one is just faster.)
 | `Invalid JSON` / `missing 'inkVersion'` | The file isn't a compiled Ink export. In Inky use **File → Export to JSON** (not "save .ink"). |
 | `Ink version N is newer/older` | Re-export from a current Inky; this template plays Ink v18–v21. |
 | `Ink runtime exception` | The compiled file is damaged or hand-edited. Re-export from Inky; don't edit the JSON by hand. |
-| `Unsupported reserved cue "@..."` | The story uses an `@` command this version doesn't run (today: `@speaker`, `@exit`, `@background`, `@music`, `@sfx`). Remove the tag in Inky, or use a plain tag (no `@`). |
+| `Unsupported reserved cue "@..."` | The story uses an `@` command this version doesn't run (today: `@speaker`, `@exit`, `@background`, `@music`, `@sfx`, `@scene`, `@transition`). Remove the tag in Inky, or use a plain tag (no `@`). |
 | `Malformed cue "..."` | An `@` tag isn't shaped like `# @command: value` — a missing colon, an empty value, or a capital letter in the *command* part (`@Speaker`). (The *value* may have capitals — `@speaker: Dispatcher` — as long as the Cue Name matches exactly; if not, you get "No SpeakerLink named" instead.) |
 | `Two "@..." cues on one beat` | The same command appears twice on one story line — keep one. |
 | `Story uses cues but there is no NarrativeStage in the scene tree` | The `Stage` node (inside `NarrativeScene`) is missing from the running scene — usually `NarrativeScene` was deleted from `Main/WorldRoot` or the Stage was removed. Put it back (undo, or re-instance `scenes/narrative/NarrativeScene.tscn` under `WorldRoot`). |
 | `No SpeakerLink named "..."` / `No BackgroundLink named "..."` | The cue value doesn't match any link's Cue Name — the message lists the names that do exist. Fix the spelling in Inky (then re-export the JSON) or in the link's Cue Name, and press Play again. |
-| `BackgroundLink "..." has no Image` / `MusicLink "..." has no Music` / `SfxLink "..." has no Sound` | Select that link under `Stage/Links` and set the named field. |
+| `BackgroundLink "..." has no Image` / `MusicLink "..." has no Music` / `SfxLink "..." has no Sound` / `SceneLink "..." has no Scene` | Select that link under `Stage/Links` and set the named field. |
+| `Cannot show "..." — its scene could not be created` | The `.tscn` on that SceneLink is broken — open it in the editor and read the errors. |
+| `Story uses @scene but Main.tscn has no ContentManager` / `ContentManager is missing its ... reference` | `Main/Managers/ContentManager` was removed or unwired — put it back (undo) and check World Root → `WorldRoot`, Story View → `NarrativeScene.tscn`. |
+| `@transition needs the Fade node` / `asks for a fade but Main/UI has no Fade node` | `Main/UI/Fade` was removed — put it back (undo, or Add Child Node → ColorRect named Fade with `scenes/ui/Fade.gd`). |
+| `Unknown transition "..."` | Only `fade` and `none` exist. |
 | `No MusicLink named "..."` / `No SfxLink named "..."` | Same as the SpeakerLink case: the cue value matches no link's Cue Name; the message lists the ones that exist. |
 | `Two SpeakerLinks/BackgroundLinks/MusicLinks/SfxLinks share the cue name` | Two links of that type have the same Cue Name — rename one. |
 | `SpeakerLink "..." has no Display Name` | Select that link under `Stage/Links` and fill in Display Name. |
@@ -340,7 +366,8 @@ to stop, then resumes when the player returns to the tab. Normal, not a bug.
   project's `stories/` folder.
 - Plain tags like `# author: Sam` are fine and ignored by the game.
 - Tags starting with `@` are game commands: `@speaker`, `@exit`,
-  `@background`, `@music`, `@sfx` work today (see the cues section above);
+  `@background`, `@music`, `@sfx`, `@scene`, `@transition` work today (see
+  the cues section above);
   any other `@` command stops the game with an error. Tags never break Inky
   — it shows them in gray next to the line and ignores them when playing.
 - No cue needed for a plain script style — writing "(Maya) Hello." straight

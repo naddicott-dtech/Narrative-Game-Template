@@ -43,9 +43,17 @@ var _story_over := false
 var _at_choices := false
 var _presentation_started := false
 var _start_requested := false
+# A "# @scene:" cue is performed on the advance AFTER its line shows.
+var _pending_scene: SceneLink = null
+# True while the story view is swapped out for a cut scene / game mode.
+var _content_up := false
+# The stage as it was when we cut away, restored when the story view returns.
+var _stage_snapshot: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group(DIRECTORS_GROUP)
+	# A cut scene / mini-game posts this when it is done (see CutScene.gd).
+	SignalBus.content_finished.connect(_on_content_finished)
 	# The Ink runtime must live as a child of the tree root, and the root is
 	# still busy assembling the scene during _ready(). One deferred step later
 	# it is free again, so the real setup happens in _boot().
@@ -106,6 +114,9 @@ func load_story(json_path: String) -> bool:
 	_story_over = false
 	_at_choices = false
 	_presentation_started = false
+	_pending_scene = null
+	_content_up = false
+	_stage_snapshot = {}
 
 	_story = _loader.load_from_path(json_path, _runtime)
 	if _story == null:
@@ -156,6 +167,11 @@ func start_story() -> void:
 func continue_story() -> void:
 	if has_failed or _story == null or _story_over or _at_choices:
 		return
+	if _content_up:
+		return   # a cut scene / game mode is on screen; it will tell us when it's done
+	if _pending_scene != null:
+		_cut_away()   # the line with the @scene cue has been read; now go
+		return
 	if not _story.can_continue:
 		_report_stop_point()
 		return
@@ -188,10 +204,20 @@ func continue_story() -> void:
 			_fail(cue_error)
 			return
 
+	# A validated @scene waits until this line has been read.
+	if stage != null:
+		_pending_scene = stage.take_pending_scene()
+
 	beat_ready.emit(text, parsed["plain_tags"])
-	_report_stop_point()
+	if _pending_scene == null:
+		_report_stop_point()
 
 func choose(choice_index: int) -> void:
+	if _content_up:
+		return
+	_choose(choice_index)
+
+func _choose(choice_index: int) -> void:
 	if has_failed or _story == null or _story_over or not _at_choices:
 		return
 
@@ -224,6 +250,64 @@ func _report_stop_point() -> void:
 	else:
 		_story_over = true
 		story_ended.emit()
+
+# ---- scene detours ----
+
+# Swap the story view out for the pending SceneLink's scene.
+func _cut_away() -> void:
+	var link := _pending_scene
+	_pending_scene = null
+	var manager := _find_content_manager()
+	if manager == null:
+		_fail("[Narrative] Story uses @scene but Main.tscn has no ContentManager under Managers.")
+		return
+	var stage := _find_stage()
+	_stage_snapshot = stage.snapshot() if stage != null else {}
+	var error: String = manager.swap_to(link.scene, link.cue_name)
+	if error != "":
+		_fail(error)
+		return
+	_content_up = true
+	if link.transition == SceneLink.Transition.FADE:
+		var fade := get_tree().get_first_node_in_group("screen_fade")
+		if fade == null:
+			_fail('[Narrative] SceneLink "%s" asks for a fade but Main/UI has no Fade node — the template ships one; put it back.' % link.cue_name)
+			return
+		fade.flash()
+
+# The cut scene / game mode is done: bring the story view back and go on.
+func _on_content_finished() -> void:
+	if not _content_up or has_failed:
+		return
+	var manager := _find_content_manager()
+	if manager == null:
+		return
+	var error: String = manager.return_to_story()
+	if error != "":
+		_fail(error)
+		return
+	_content_up = false
+	var stage := _find_stage()
+	if stage != null and not _stage_snapshot.is_empty():
+		error = stage.restore(_stage_snapshot)
+		if error != "":
+			_fail(error)
+			return
+	_stage_snapshot = {}
+	# The fresh story view subscribes to us one deferred step from now;
+	# continue one step later still, so it hears the next line.
+	_resume_after_content.call_deferred()
+
+func _resume_after_content() -> void:
+	if has_failed or _story == null or _content_up:
+		return
+	if _story.can_continue:
+		continue_story()
+	else:
+		_report_stop_point()
+
+func _find_content_manager() -> ContentManager:
+	return get_tree().get_first_node_in_group(ContentManager.GROUP) as ContentManager
 
 # The loader already printed its own [Narrative] error; only record and relay.
 func _on_loader_failed(message: String) -> void:

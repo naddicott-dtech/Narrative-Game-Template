@@ -1,11 +1,13 @@
-[gd_scene load_steps=8 format=3 uid="uid://c8vsrpns1aeg7"]
+[gd_scene load_steps=10 format=3 uid="uid://c8vsrpns1aeg7"]
 
 [ext_resource type="PackedScene" uid="uid://bjl08sv1ddywf" path="res://scenes/managers/TimeManager.tscn" id="1_rvslj"]
 [ext_resource type="Script" uid="uid://cqwlteyggf7h0" path="res://scenes/Main.gd" id="1_vcsgt"]
 [ext_resource type="PackedScene" uid="uid://bta1s1d428yeq" path="res://scenes/ui/HUD.tscn" id="2_0bbpv"]
 [ext_resource type="Script" uid="uid://dc6bcnu6gnbqb" path="res://scenes/managers/NarrativeDirector.gd" id="3_vcsgt"]
 [ext_resource type="PackedScene" uid="uid://bu4ru6bejvulx" path="res://scenes/narrative/NarrativeScene.tscn" id="4_c01mt"]
+[ext_resource type="Script" uid="uid://c0kg4eipcjkql" path="res://scenes/managers/ContentManager.gd" id="4_q8u5g"]
 [ext_resource type="Script" uid="uid://bbw54cdh50dfs" path="res://scenes/ui/ErrorBanner.gd" id="6_nxtc6"]
+[ext_resource type="Script" uid="uid://bnt2u8vw27vs1" path="res://scenes/ui/Fade.gd" id="7_lhr70"]
 [ext_resource type="Script" uid="uid://cso5a6vqq1162" path="res://scenes/ui/SoundToggle.gd" id="7_nxtc6"]
 
 [node name="Main" type="Node"]
@@ -19,6 +21,11 @@ story_file = "res://stories/example_story.json"
 
 [node name="TimeManager" parent="Managers" instance=ExtResource("1_rvslj")]
 
+[node name="ContentManager" type="Node" parent="Managers" node_paths=PackedStringArray("world_root")]
+script = ExtResource("4_q8u5g")
+world_root = NodePath("../../WorldRoot")
+story_view = ExtResource("4_c01mt")
+
 [node name="WorldRoot" type="Node" parent="."]
 
 [node name="NarrativeScene" parent="WorldRoot" instance=ExtResource("4_c01mt")]
@@ -31,6 +38,16 @@ offset_left = 54.0
 offset_top = 34.0
 offset_right = 94.0
 offset_bottom = 74.0
+
+[node name="Fade" type="ColorRect" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+script = ExtResource("7_lhr70")
 
 [node name="ErrorBanner" type="Label" parent="UI"]
 visible = false

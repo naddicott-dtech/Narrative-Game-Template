@@ -54,3 +54,14 @@ signal music_changed(music_name)   # posted after a "@music:" cue succeeds ("off
 
 @warning_ignore("UNUSED_SIGNAL")
 signal sfx_played(sfx_name)        # posted after a "@sfx:" cue plays a sound
+
+@warning_ignore("UNUSED_SIGNAL")
+signal content_changed(content_name)  # posted after the story cut away to a scene
+									  # ("# @scene: ...") and it is on screen
+
+@warning_ignore("UNUSED_SIGNAL")
+signal content_finished               # POST THIS from a cut scene / mini-game when it
+									  # is done: the story view comes back and continues
+
+@warning_ignore("UNUSED_SIGNAL")
+signal story_view_returned            # posted when the story view is back on screen
