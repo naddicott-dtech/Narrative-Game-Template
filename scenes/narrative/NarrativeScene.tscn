@@ -92,16 +92,16 @@ stretch_mode = 5
 
 [node name="Links" type="Node" parent="Stage"]
 
-[node name="MayaLink" type="Node" parent="Stage/Links"]
+[node name="Character1" type="Node" parent="Stage/Links"]
 script = ExtResource("5_ph7vt")
-cue_name = "maya"
-display_name = "Maya"
+cue_name = "character_1"
+display_name = "Character 1"
 portrait = ExtResource("6_ehrbh")
 
-[node name="GuideLink" type="Node" parent="Stage/Links"]
+[node name="Character2" type="Node" parent="Stage/Links"]
 script = ExtResource("5_ph7vt")
-cue_name = "guide"
-display_name = "The Guide"
+cue_name = "character_2"
+display_name = "Character 2"
 portrait = ExtResource("7_csi2x")
 side = 1
 

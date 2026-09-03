@@ -109,10 +109,13 @@ The narrator returns. # @speaker: none
 - `# @speaker: none` clears the name and dims both portraits (the narrator is
   talking; the cast stays on screen). `none` is a reserved word, not a
   character. Portraits leave the screen when a new story starts.
-- **Add a character:** select `MayaLink` or `GuideLink` under
-  `NarrativeScene/Stage/Links`, duplicate it (Cmd+D — the copy appears as
-  `MayaLink2`), rename it (double-click its name in the Scene panel), and
-  set its Cue Name / Display Name / Portrait / Side in the Inspector. The
+- **Add a character:** the template ships two example links, `Character1`
+  (left) and `Character2` (right), under `NarrativeScene/Stage/Links` with
+  Cue Names `character_1` / `character_2`. Select one, duplicate it (Cmd+D —
+  the copy appears as `Character3`), rename it (double-click its name in the
+  Scene panel), and set its Cue Name / Display Name / Portrait / Side in the
+  Inspector. Or just edit the two examples in place for your first two
+  characters. The
   node's own name is just a label for you; what matters is that **Cue Name
   matches the Ink tag exactly**. Capitals work if both sides match, but
   lowercase words joined by underscores (`dispatcher`, `old_man`) mean you
