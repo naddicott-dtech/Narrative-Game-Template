@@ -13,3 +13,9 @@
 /test
 /addons/gdUnit4
 /reports/
+
+# Story files belong in stories/. Anything dropped at the project root for a
+# quick test (a student's export, a scratch .ink) must never reach the public
+# repo — student work stays out of GitHub.
+/*.json
+/*.ink
