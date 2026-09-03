@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://bu4ru6bejvulx"]
+[gd_scene load_steps=12 format=3 uid="uid://bu4ru6bejvulx"]
 
 [ext_resource type="Script" uid="uid://bv0rwm6cmxmvt" path="res://scenes/narrative/NarrativeScene.gd" id="1_mesrm"]
 [ext_resource type="PackedScene" uid="uid://bjygvkrqu60at" path="res://scenes/ui/ChoiceButton.tscn" id="2_kackd"]
@@ -7,6 +7,9 @@
 [ext_resource type="Script" uid="uid://hx41qu3yv3i4" path="res://scenes/narrative/SpeakerLink.gd" id="5_ph7vt"]
 [ext_resource type="Texture2D" uid="uid://dy6fxupkd3flv" path="res://assets/placeholders/portrait_1.png" id="6_ehrbh"]
 [ext_resource type="Texture2D" uid="uid://clehvb43o4kdm" path="res://assets/placeholders/portrait_2.png" id="7_csi2x"]
+[ext_resource type="Script" uid="uid://bop3n0at6eph3" path="res://scenes/narrative/BackgroundLink.gd" id="8_6d6em"]
+[ext_resource type="Texture2D" uid="uid://dh8rfff5bxheg" path="res://assets/placeholders/background_1.png" id="9_ph7vt"]
+[ext_resource type="Texture2D" uid="uid://86ffjhbntl2g" path="res://assets/placeholders/background_2.png" id="10_ehrbh"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_x7kpj"]
 content_margin_left = 16.0
@@ -104,6 +107,16 @@ cue_name = "character_2"
 display_name = "Character 2"
 portrait = ExtResource("7_csi2x")
 side = 1
+
+[node name="Background1" type="Node" parent="Stage/Links"]
+script = ExtResource("8_6d6em")
+cue_name = "background_1"
+image = ExtResource("9_ph7vt")
+
+[node name="Background2" type="Node" parent="Stage/Links"]
+script = ExtResource("8_6d6em")
+cue_name = "background_2"
+image = ExtResource("10_ehrbh")
 
 [node name="DialogueBox" type="PanelContainer" parent="."]
 layout_mode = 1

@@ -40,3 +40,11 @@ signal story_started                  # posted when a story (re)starts cleanly
 @warning_ignore("UNUSED_SIGNAL")
 signal narrative_failed(message)      # posted with every [Narrative] error, so
 									  # anything on screen can react (ErrorBanner)
+
+@warning_ignore("UNUSED_SIGNAL")
+signal background_changed(background_name)  # posted after a "@background:" cue
+											# succeeds ("none" = the starting picture)
+
+@warning_ignore("UNUSED_SIGNAL")
+signal character_exited(speaker_name)  # posted after an "@exit:" cue succeeds
+									   # ("all" = the whole cast left)

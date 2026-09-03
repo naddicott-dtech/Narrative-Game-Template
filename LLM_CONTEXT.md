@@ -92,14 +92,30 @@ tweaks, not build features for them**. Prefer short, specific answers.
   listen. Story-related posts: `story_started`, `narrative_failed(message)`,
   `speaker_changed(name)`.
 
-## Story cues: @speaker
+## Story cues: @speaker, @exit, @background
 
 In Inky, end a line with a cue tag:
 
 ```ink
+The truck stop glows at dusk. # @background: truck_stop
 Maya waves hello. # @speaker: maya
 The narrator returns. # @speaker: none
+Maya walks off. # @exit: maya
+Back on the road. # @background: none
 ```
+
+| Cue | What it does | Needs |
+|---|---|---|
+| `@speaker: name` | shows that character's name + portrait (lit); the other slot dims | a SpeakerLink with that Cue Name |
+| `@speaker: none` | narrator: no name, cast stays dimmed | nothing |
+| `@exit: name` | that character leaves the screen | a SpeakerLink with that Cue Name |
+| `@exit: all` | everyone leaves, name cleared | nothing |
+| `@background: name` | swaps the full-screen picture | a BackgroundLink with that Cue Name |
+| `@background: none` | back to the picture the scene started with | nothing |
+
+A beat may carry several cues (`# @background: bar # @speaker: maya`), one
+command each. A cue whose link is missing stops the game with an error that
+lists the known names.
 
 - `# @speaker: maya` looks for a **SpeakerLink** node under
   `NarrativeScene/Stage/Links` whose **Cue Name** is `maya`, shows its
@@ -125,6 +141,16 @@ The narrator returns. # @speaker: none
   different image files, and use the matching tag in Inky.
 - **A voice with no picture** (a radio, an off-screen shout): leave Portrait
   empty. The name shows; nobody on screen is lit.
+- **Add a background:** the template ships two example `BackgroundLink`s,
+  `Background1` / `Background2` (Cue Names `background_1` / `background_2`),
+  next to the character links under `Stage/Links`. Duplicate one, rename it,
+  set its Cue Name and **Image** (see "Before you start" for bringing in a
+  picture). Any image size works — it is scaled to cover the screen. The
+  picture the scene starts with is `Stage/Background` → Texture; that is
+  what `@background: none` returns to.
+- **Someone leaves:** `# @exit: maya` clears Maya's portrait (and her name if
+  she was the one talking). `# @exit: all` empties the stage. Characters also
+  leave when a new story starts.
 - A cue value with no matching SpeakerLink stops the game with an error
   that lists the known names — check spelling on both sides.
 - Portraits start as labeled placeholder art in `assets/placeholders/`
@@ -148,6 +174,8 @@ The narrator returns. # @speaker: none
   lowercase command names, and the same command can't repeat on one beat.
   Any other `@` command (like `@music`) is not run by this version yet and
   stops the game loudly.
+- *(For the assistant, code-level:)* successful cues also post
+  `SignalBus.background_changed(name)` and `SignalBus.character_exited(name)`.
 
 ## Common `[Narrative]` errors → likely fixes
 
@@ -158,11 +186,13 @@ The narrator returns. # @speaker: none
 | `Invalid JSON` / `missing 'inkVersion'` | The file isn't a compiled Ink export. In Inky use **File → Export to JSON** (not "save .ink"). |
 | `Ink version N is newer/older` | Re-export from a current Inky; this template plays Ink v18–v21. |
 | `Ink runtime exception` | The compiled file is damaged or hand-edited. Re-export from Inky; don't edit the JSON by hand. |
-| `Unsupported reserved cue "@..."` | The story uses an `@` command this version doesn't run (only `@speaker` works today). Remove the tag in Inky, or use a plain tag (no `@`). |
+| `Unsupported reserved cue "@..."` | The story uses an `@` command this version doesn't run (today: `@speaker`, `@exit`, `@background`). Remove the tag in Inky, or use a plain tag (no `@`). |
 | `Malformed cue "..."` | An `@` tag isn't shaped like `# @command: value` — a missing colon, an empty value, or a capital letter in the *command* part (`@Speaker`). (The *value* may have capitals — `@speaker: Dispatcher` — as long as the Cue Name matches exactly; if not, you get "No SpeakerLink named" instead.) |
 | `Two "@..." cues on one beat` | The same command appears twice on one story line — keep one. |
 | `Story uses cues but there is no NarrativeStage in the scene tree` | The `Stage` node (inside `NarrativeScene`) is missing from the running scene — usually `NarrativeScene` was deleted from `Main/WorldRoot` or the Stage was removed. Put it back (undo, or re-instance `scenes/narrative/NarrativeScene.tscn` under `WorldRoot`). |
-| `No SpeakerLink named "..."` | The cue value doesn't match any SpeakerLink's Cue Name — the message lists the names that do exist. Fix the spelling in Inky (then re-export the JSON) or in the link's Cue Name, and press Play again. |
+| `No SpeakerLink named "..."` / `No BackgroundLink named "..."` | The cue value doesn't match any link's Cue Name — the message lists the names that do exist. Fix the spelling in Inky (then re-export the JSON) or in the link's Cue Name, and press Play again. |
+| `BackgroundLink "..." has no Image` | Select that link under `Stage/Links` and set its Image. |
+| `Two SpeakerLinks/BackgroundLinks share the cue name` | Two links have the same Cue Name — rename one. |
 | `SpeakerLink "..." has no Display Name` | Select that link under `Stage/Links` and fill in Display Name. |
 | `NarrativeStage is missing its ... reference` | Select `Stage` and assign the reference it names (Background, Left Portrait, Right Portrait, or Speaker Label). |
 | `NarrativeScene found no NarrativeDirector` | `Main.tscn` has no `NarrativeDirector` under `Managers` — put it back (undo, or add a Node named NarrativeDirector with `scenes/managers/NarrativeDirector.gd` attached). |
@@ -250,8 +280,9 @@ to stop, then resumes when the player returns to the tab. Normal, not a bug.
 - Write and test the story in Inky; **File → Export to JSON** into the
   project's `stories/` folder.
 - Plain tags like `# author: Sam` are fine and ignored by the game.
-- Tags starting with `@` are game commands. `@speaker` works today (see the
-  cues section above); any other `@` command stops the game with an error.
+- Tags starting with `@` are game commands: `@speaker`, `@exit`,
+  `@background` work today (see the cues section above); any other `@`
+  command stops the game with an error.
 - No cue needed for a plain script style — writing "(Maya) Hello." straight
   in the story text is always fine.
 
