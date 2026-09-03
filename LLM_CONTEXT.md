@@ -35,10 +35,12 @@ tweaks, not build features for them**. Prefer short, specific answers.
 - **Where things are in the editor:** the **Scene panel** (node tree) is top
   left, the **Inspector** (properties of the selected node) is on the right,
   the **FileSystem dock** (your project's files) is bottom left.
-- **Using your own picture:** drag the image file from Finder into the
-  FileSystem dock (onto the `assets/` folder). Then select the node that
-  should show it and drag the file from the FileSystem dock onto its
-  **Portrait** (or **Texture**) field — or click the field and choose **Load**.
+- **Using your own picture** (`.png` or `.jpg`, either is fine): drag the
+  image file from Finder into the FileSystem dock (onto the `assets/`
+  folder). Then select the node that should show it and drag the file from
+  the FileSystem dock onto its picture field — **Portrait** on a character
+  link, **Image** on a background link, **Texture** on `Stage/Background` —
+  or click the field and choose **Load**.
 - **After any change in Inky:** File → Export to JSON again (same file name,
   into `stories/`), then press Play again in Godot. Nothing else to redo.
 
@@ -99,10 +101,15 @@ In Inky, end a line with a cue tag:
 ```ink
 The truck stop glows at dusk. # @background: truck_stop
 Maya waves hello. # @speaker: maya
-The narrator returns. # @speaker: none
-Maya walks off. # @exit: maya
+Maya: Goodbye, driver. # @speaker: maya
+The door swings shut behind her. # @exit: maya
 Back on the road. # @background: none
 ```
+
+**Timing:** a cue takes effect *as its line appears*. So a goodbye line
+keeps `@speaker: maya`, and the `@exit: maya` goes on the *next* line (as
+above) — otherwise she vanishes while still talking. Same for backgrounds:
+the new picture shows together with the line that carries the cue.
 
 | Cue | What it does | Needs |
 |---|---|---|
@@ -114,8 +121,8 @@ Back on the road. # @background: none
 | `@background: none` | back to the picture the scene started with | nothing |
 
 A beat may carry several cues (`# @background: bar # @speaker: maya`), one
-command each. A cue whose link is missing stops the game with an error that
-lists the known names.
+command each; they run left to right, before the line shows. A cue whose
+link is missing stops the game with an error that lists the known names.
 
 - `# @speaker: maya` looks for a **SpeakerLink** node under
   `NarrativeScene/Stage/Links` whose **Cue Name** is `maya`, shows its
