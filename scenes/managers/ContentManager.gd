@@ -19,11 +19,21 @@ const GROUP := "content_manager"
 @export var world_root: Node
 ## The story view scene to bring back after a detour (NarrativeScene.tscn).
 @export var story_view: PackedScene
+## The screen the game opens on (New Game / Continue). Clear it to open
+## straight into the story.
+@export var title_screen: PackedScene
+## The screen shown after the story's last line. Clear it to just stop there.
+@export var end_screen: PackedScene
 
 var _story_view_up := true
 
 func _ready() -> void:
 	add_to_group(GROUP)
+	# Main may open on the title screen: read what is actually in WorldRoot.
+	if world_root != null and story_view != null and world_root.get_child_count() > 0:
+		var first_path: String = world_root.get_child(0).scene_file_path
+		if first_path != "":
+			_story_view_up = first_path == story_view.resource_path
 
 func is_story_view_up() -> bool:
 	return _story_view_up
@@ -61,6 +71,33 @@ func return_to_story() -> String:
 	_replace_content(node)
 	_story_view_up = true
 	SignalBus.story_view_returned.emit()
+	return ""
+
+# Show the title screen (if one is set). "" or an error.
+func show_title() -> String:
+	return _show_screen(title_screen, "title", "Title Screen")
+
+# Show the end screen (if one is set). "" or an error.
+func show_end() -> String:
+	return _show_screen(end_screen, "end", "End Screen")
+
+func has_title_screen() -> bool:
+	return title_screen != null
+
+func has_end_screen() -> bool:
+	return end_screen != null
+
+func _show_screen(scene: PackedScene, content_name: String, field_name: String) -> String:
+	if world_root == null:
+		return _missing_reference("World Root")
+	if scene == null:
+		return _missing_reference(field_name)
+	var node: Node = scene.instantiate()
+	if node == null:
+		return "[Narrative] The %s scene could not be created. Open it in the editor and check it for errors." % field_name
+	_replace_content(node)
+	_story_view_up = false
+	SignalBus.content_changed.emit(content_name)
 	return ""
 
 func _replace_content(node: Node) -> void:

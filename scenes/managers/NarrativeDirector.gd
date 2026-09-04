@@ -49,11 +49,26 @@ var _pending_scene: SceneLink = null
 var _content_up := false
 # The stage as it was when we cut away, restored when the story view returns.
 var _stage_snapshot: Dictionary = {}
+# The text of the beat on screen — saved with the checkpoint so Continue can
+# show it again.
+var _last_beat_text := ""
+# A saved game waiting to be restored (set by SaveManager.load_game via
+# apply_snapshot; used by the next start_story).
+var _pending_restore: Dictionary = {}
+# The story ended; the next advance shows the end screen.
+var _end_pending := false
 
 func _ready() -> void:
 	add_to_group(DIRECTORS_GROUP)
 	# A cut scene / mini-game posts this when it is done (see CutScene.gd).
 	SignalBus.content_finished.connect(_on_content_finished)
+	# The title / end screens' buttons.
+	SignalBus.new_game_requested.connect(_on_new_game_requested)
+	SignalBus.continue_requested.connect(_on_continue_requested)
+	SignalBus.title_requested.connect(_on_title_requested)
+	# Checkpoints go through the hub SaveManager: it asks every "savable"
+	# node for a snapshot (see get_snapshot / apply_snapshot below).
+	add_to_group("savable")
 	# The Ink runtime must live as a child of the tree root, and the root is
 	# still busy assembling the scene during _ready(). One deferred step later
 	# it is free again, so the real setup happens in _boot().
@@ -117,6 +132,8 @@ func load_story(json_path: String) -> bool:
 	_pending_scene = null
 	_content_up = false
 	_stage_snapshot = {}
+	_end_pending = false
+	_last_beat_text = ""
 
 	_story = _loader.load_from_path(json_path, _runtime)
 	if _story == null:
@@ -162,10 +179,18 @@ func start_story() -> void:
 		stage.reset()
 	story_started.emit()
 	SignalBus.story_started.emit()   # the bulletin board copy (ErrorBanner listens)
+	if not _pending_restore.is_empty():
+		_restore_checkpoint()   # Continue: pick up where the player left off
+		return
 	continue_story()
 
 func continue_story() -> void:
-	if has_failed or _story == null or _story_over or _at_choices:
+	if has_failed or _story == null:
+		return
+	if _end_pending:
+		_show_end_screen()   # the last line has been read
+		return
+	if _story_over or _at_choices:
 		return
 	if _content_up:
 		return   # a cut scene / game mode is on screen; it will tell us when it's done
@@ -208,6 +233,7 @@ func continue_story() -> void:
 	if stage != null:
 		_pending_scene = stage.take_pending_scene()
 
+	_last_beat_text = text
 	beat_ready.emit(text, parsed["plain_tags"])
 	if _pending_scene == null:
 		_report_stop_point()
@@ -247,8 +273,12 @@ func _report_stop_point() -> void:
 		for choice in choices:
 			texts.append(choice.text)
 		choices_ready.emit(texts)
+		_write_checkpoint()   # every choice point is a place Continue can return to
 	else:
 		_story_over = true
+		SaveManager.delete_save()   # a finished story has nothing to continue
+		var manager := _find_content_manager()
+		_end_pending = manager != null and manager.has_end_screen()
 		story_ended.emit()
 
 # ---- scene detours ----
@@ -308,6 +338,127 @@ func _resume_after_content() -> void:
 
 func _find_content_manager() -> ContentManager:
 	return get_tree().get_first_node_in_group(ContentManager.GROUP) as ContentManager
+
+# ---- title, end, new game, continue ----
+
+func _on_new_game_requested() -> void:
+	SaveManager.delete_save()
+	_pending_restore = {}
+	if story_file.is_empty() or not load_story(story_file):
+		return
+	_show_story_view_and_start()
+
+func _on_continue_requested() -> void:
+	if not SaveManager.has_save():
+		_fail("[Narrative] No saved game to continue — start a New Game.")
+		return
+	_pending_restore = {}
+	if not SaveManager.load_game():   # calls apply_snapshot() on us (by node path)
+		_fail("[Narrative] The saved game could not be read — start a New Game.")
+		return
+	if _pending_restore.is_empty():
+		# The director's node path may have changed (a renamed node, a test
+		# rig): find the story checkpoint by its contents instead.
+		for entry in SaveManager.read_snapshot().get("savables", []):
+			var data = entry.get("data", {})
+			if data is Dictionary and data.has("ink_state"):
+				_pending_restore = data
+				break
+	if _pending_restore.is_empty():
+		_fail("[Narrative] The saved game has no story in it — start a New Game.")
+		return
+	var saved_file: String = _pending_restore.get("story_file", "")
+	if saved_file != story_file:
+		_pending_restore = {}
+		_fail(
+			"[Narrative] The saved game is from a different story (%s) — start a New Game."
+			% saved_file
+		)
+		return
+	if not load_story(story_file):
+		return
+	_show_story_view_and_start()
+
+func _on_title_requested() -> void:
+	var manager := _find_content_manager()
+	if manager == null:
+		return
+	var error: String = manager.show_title()
+	if error != "":
+		_fail(error)
+		return
+	_presentation_started = false
+	_content_up = false
+
+# Put the story view on screen; it starts the story when it connects. With
+# no ContentManager (tests, or a Main without one) start right here.
+func _show_story_view_and_start() -> void:
+	var manager := _find_content_manager()
+	if manager == null or manager.is_story_view_up():
+		start_story()
+		return
+	var error: String = manager.return_to_story()
+	if error != "":
+		_fail(error)
+		return
+	# The story view subscribes one deferred step from now and normally
+	# starts the story itself; if it doesn't (a custom view), start it here.
+	start_story.call_deferred()
+
+func _show_end_screen() -> void:
+	_end_pending = false
+	var manager := _find_content_manager()
+	if manager == null:
+		return
+	var error: String = manager.show_end()
+	if error != "":
+		_fail(error)
+
+# ---- checkpoints (the hub SaveManager's "savable" convention) ----
+
+func get_snapshot() -> Dictionary:
+	if _story == null:
+		return {}
+	var stage := _find_stage()
+	return {
+		"story_file": story_file,
+		"ink_state": _story.state.to_json(),
+		"stage": stage.snapshot() if stage != null else {},
+		"beat_text": _last_beat_text,
+	}
+
+func apply_snapshot(data: Dictionary) -> void:
+	_pending_restore = data
+
+func _write_checkpoint() -> void:
+	if has_failed or not is_inside_tree():
+		return
+	SaveManager.save_game()
+
+# Continue: the story is freshly loaded; put it back where the checkpoint was.
+func _restore_checkpoint() -> void:
+	var data := _pending_restore
+	_pending_restore = {}
+	var ink_state: String = data.get("ink_state", "")
+	if ink_state.is_empty():
+		_fail("[Narrative] The saved game is incomplete — start a New Game.")
+		return
+	_story.state.load_json(ink_state)
+	if has_failed:
+		return
+	var stage := _find_stage()
+	var stage_state: Dictionary = data.get("stage", {})
+	if stage != null and not stage_state.is_empty():
+		var music: String = stage_state.get("music", "")
+		var error: String = stage.restore(stage_state)
+		if error == "" and music != "":
+			error = stage.execute_cue("music", music, "")   # not playing yet: start it
+		if error != "":
+			_fail(error)
+			return
+	_last_beat_text = data.get("beat_text", "")
+	beat_ready.emit(_last_beat_text, [])
+	_report_stop_point()
 
 # The loader already printed its own [Narrative] error; only record and relay.
 func _on_loader_failed(message: String) -> void:

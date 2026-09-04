@@ -136,7 +136,9 @@ func restore(state: Dictionary) -> String:
 				return found["error"]
 			background.texture = found["link"].image
 	_background_cue = background_cue
-	_current_music = state.get("music", "")
+	# Remember the track only if it is really playing (after a scene detour it
+	# is). After a Continue nothing is playing yet — the director cues it.
+	_current_music = state.get("music", "") if AudioManager._music_player.playing else ""
 	return ""
 
 # The director takes the parked @scene link (once) when it performs the cut.

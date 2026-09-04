@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://c20fwj485j3qc"]
+
+[ext_resource type="Script" uid="uid://81bicyqdxhnj" path="res://scenes/content/TitleScreen.gd" id="1_tt3d1"]
+[ext_resource type="Texture2D" uid="uid://jky52jijcg8m" path="res://assets/placeholders/title_screen.png" id="2_67o2p"]
+
+[node name="TitleScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_tt3d1")
+picture = ExtResource("2_67o2p")

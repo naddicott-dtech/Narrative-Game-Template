@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://dgpajuwmio0ad"]
+
+[ext_resource type="Script" uid="uid://cwvcs7mkvs4rv" path="res://scenes/content/EndScreen.gd" id="1_lbu4a"]
+[ext_resource type="Texture2D" uid="uid://bs8sec4xu2h21" path="res://assets/placeholders/end_screen.png" id="2_3kdcj"]
+
+[node name="EndScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_lbu4a")
+picture = ExtResource("2_3kdcj")

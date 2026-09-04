@@ -72,6 +72,25 @@ func save_game() -> bool:
 		return true
 	return false
 
+# Is there a saved game on disk?
+func has_save() -> bool:
+	return FileAccess.file_exists(SAVE_PATH)
+
+# Forget the saved game (a finished story, or "New Game").
+func delete_save() -> void:
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+
+# Reads the saved Dictionary without applying it (empty if there is none).
+func read_snapshot() -> Dictionary:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return {}
+	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if not file:
+		return {}
+	var parsed = JSON.parse_string(file.get_as_text())
+	return parsed if parsed is Dictionary else {}
+
 # Reads the file back and applies it. Returns false if there's nothing to load.
 func load_game() -> bool:
 	if not FileAccess.file_exists(SAVE_PATH):

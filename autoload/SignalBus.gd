@@ -65,3 +65,12 @@ signal content_finished               # POST THIS from a cut scene / mini-game w
 
 @warning_ignore("UNUSED_SIGNAL")
 signal story_view_returned            # posted when the story view is back on screen
+
+@warning_ignore("UNUSED_SIGNAL")
+signal new_game_requested             # the title / end screen's New Game button
+
+@warning_ignore("UNUSED_SIGNAL")
+signal continue_requested             # the title screen's Continue button
+
+@warning_ignore("UNUSED_SIGNAL")
+signal title_requested                # "back to the title screen"

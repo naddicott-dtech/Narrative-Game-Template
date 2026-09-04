@@ -49,7 +49,8 @@ tweaks, not build features for them**. Prefer short, specific answers.
 - The student's story: one compiled JSON file, usually in `stories/`.
 - **Main** (`scenes/Main.tscn`) is the frame that never changes while the
   game runs: `Managers` (the story engine), `WorldRoot` (holds the ONE scene
-  currently on screen), and `UI` (things that stay on screen no matter what).
+  currently on screen — the title screen at first, then the story view),
+  and `UI` (things that stay on screen no matter what).
 - **NarrativeDirector** (node: `Main/Managers/NarrativeDirector`, script
   `scenes/managers/NarrativeDirector.gd`) runs the story. Its Inspector field
   **Story File** points at the JSON. *(For the assistant, code-level:)* it
@@ -230,6 +231,43 @@ link is missing stops the game with an error that lists the known names.
   played by the `AudioManager` autoload (`autoload/AudioManager.gd`:
   `play_music`, `stop_music`, `play_sfx`, `set_master_volume`).
 
+## Title screen, end screen, and saving
+
+- **Play opens on the title screen** (`scenes/content/TitleScreen.tscn`):
+  a picture, your game's title and subtitle, **New Game** and **Continue**.
+  Open that scene, select its top node (`TitleScreen`) and change **Title**,
+  **Subtitle**, **Picture** in the Inspector (Picture takes an image the
+  same way as Portrait/Image/Texture — drag the file onto the field).
+- **To skip the title screen** and open straight into the story: in
+  `Main.tscn` select `Managers/ContentManager`; on its **Title Screen**
+  field click the small ▾ arrow at the right end and choose **Clear**.
+  Costs: no Continue button (checkpoints are still written, but nothing
+  offers them), and the end screen's Title button will show a red
+  "missing its Title Screen reference" error if pressed — so clear **End
+  Screen** too, or remove that button from `EndScreen.tscn`.
+- **After the last line** of the story, one more click shows the end screen
+  (`scenes/content/EndScreen.tscn`, top node `EndScreen`: **Message**,
+  **Picture**). Its two buttons already work: **Play Again** restarts the
+  story, **Title** goes back to the title screen. Clear ContentManager's
+  **End Screen** field (same ▾ → Clear) to just stop on the last line.
+- **Saving is automatic:** every time the player reaches a choice, the game
+  saves a checkpoint (the story's position, its variables, and what's on
+  stage). **Continue** on the title screen is greyed out until one exists
+  and takes the player back to that last choice — same background, cast and
+  music. Finishing the story clears the checkpoint. There is nothing to wire
+  and no save button. It works in the browser too: the save lives in that
+  browser's storage on that computer, so a friend who played on their laptop
+  can Continue on their laptop (and only there). Continue stays greyed out
+  for anyone who closed the tab before reaching their first choice.
+- The checkpoint belongs to one story: switch **Story File** and an old
+  save says `The saved game is from a different story` — press New Game.
+- *(For the assistant, code-level:)* the buttons post
+  `SignalBus.new_game_requested` / `continue_requested` / `title_requested`;
+  `ContentManager.show_title()` / `show_end()` swap the screens; the
+  director joins the hub `SaveManager`'s `savable` group (`get_snapshot` /
+  `apply_snapshot`), so `SaveManager.save_game()` / `load_game()` /
+  `has_save()` / `delete_save()` are the whole save API.
+
 ## Showing an Ink variable on screen (VariableDisplay)
 
 If the story has `VAR fuel = 100`, the game can show it live — no Ink change:
@@ -281,6 +319,8 @@ Child Node — duplicating an existing one is just faster.)
 | `NarrativeScene found no NarrativeDirector` | `Main.tscn` has no `NarrativeDirector` under `Managers` — put it back (undo, or add a Node named NarrativeDirector with `scenes/managers/NarrativeDirector.gd` attached). |
 | `NarrativeScene is missing Inspector references` | Select `NarrativeScene` and assign the references it lists. |
 | `VariableDisplay "..." watches "..." but the story has no such variable` | The Variable Name on that node doesn't match a `VAR` in the story; the message lists the real names. Fix the spelling (or re-export the story if you just added the VAR). |
+| `The saved game is from a different story` / `No saved game to continue` / `The saved game could not be read` | Press New Game. (A checkpoint only fits the story it was made in.) |
+| `ContentManager is missing its Title Screen / End Screen reference` | Something asked for a screen that isn't set on `Managers/ContentManager` — set the field, or remove what asked. |
 | `Choice N does not exist` | Code called `choose()` with a bad number — choices are numbered from 0. |
 
 ## Little tweaks (Inspector first)
